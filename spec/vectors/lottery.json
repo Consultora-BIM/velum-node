@@ -1,0 +1,114 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "Sorteo público: sha512(baliza|trozo|papel[|ronda]) → 64 bits BE mod Σpesos → elección acumulada sobre nodos ordenados. Completo 2, ligero 1.",
+  "cases": [
+    {
+      "snapshot": {
+        "epoch": 3,
+        "beacon": "74677648abab4739b8a979bdffd419672a1b2c2e19b5f435d5560f51aac595d6",
+        "nodes": [
+          {
+            "node": "vel2fA2FVjqgqiBvjbArSHa5mpDgkjhD77CCWquYNbEYuCg",
+            "w": 2
+          },
+          {
+            "node": "vel38HdEVR8vV5h4G5Kvct4pnuZDuWKJuA5HwrbrZubFyqk",
+            "w": 2
+          },
+          {
+            "node": "vel3VcxSornAunvoUnwUXF7NXQ5FstzsEgoNdxmzm9hbhgs",
+            "w": 1
+          },
+          {
+            "node": "vel8CFhuPJGFBddwY79DRowsrCZsPCDQRqKeEk4AEMsgNBS",
+            "w": 2
+          },
+          {
+            "node": "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL",
+            "w": 2
+          }
+        ],
+        "total": 9
+      },
+      "shard": "4074e726040156624d3fb807eae92fea26749e774854ffc462202e14fabde089",
+      "carrier": "vel8CFhuPJGFBddwY79DRowsrCZsPCDQRqKeEk4AEMsgNBS",
+      "courier": "vel2fA2FVjqgqiBvjbArSHa5mpDgkjhD77CCWquYNbEYuCg",
+      "candidates": [
+        "vel8CFhuPJGFBddwY79DRowsrCZsPCDQRqKeEk4AEMsgNBS",
+        "vel3VcxSornAunvoUnwUXF7NXQ5FstzsEgoNdxmzm9hbhgs",
+        "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL"
+      ]
+    },
+    {
+      "shard": "e075fc47f375ccffea162b834c5e52268272eb5140319a0ccb9063d0ec82db61",
+      "carrier": "vel38HdEVR8vV5h4G5Kvct4pnuZDuWKJuA5HwrbrZubFyqk",
+      "courier": "vel38HdEVR8vV5h4G5Kvct4pnuZDuWKJuA5HwrbrZubFyqk",
+      "candidates": [
+        "vel38HdEVR8vV5h4G5Kvct4pnuZDuWKJuA5HwrbrZubFyqk",
+        "vel8CFhuPJGFBddwY79DRowsrCZsPCDQRqKeEk4AEMsgNBS",
+        "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL"
+      ]
+    },
+    {
+      "shard": "691ec0d9deaa276e17f7788654ebc77e9bb20d2ffce73be7ab336ae988da8c77",
+      "carrier": "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL",
+      "courier": "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL",
+      "candidates": [
+        "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL",
+        "vel8CFhuPJGFBddwY79DRowsrCZsPCDQRqKeEk4AEMsgNBS",
+        "vel2fA2FVjqgqiBvjbArSHa5mpDgkjhD77CCWquYNbEYuCg"
+      ]
+    },
+    {
+      "shard": "ebe4a47d683b4c18a64bde1d9ea6dafe49bffb7da6ca49630e6be050789c798c",
+      "carrier": "vel2fA2FVjqgqiBvjbArSHa5mpDgkjhD77CCWquYNbEYuCg",
+      "courier": "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL",
+      "candidates": [
+        "vel2fA2FVjqgqiBvjbArSHa5mpDgkjhD77CCWquYNbEYuCg",
+        "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL",
+        "vel38HdEVR8vV5h4G5Kvct4pnuZDuWKJuA5HwrbrZubFyqk"
+      ]
+    },
+    {
+      "shard": "1ca6262fb9364a81861f4b60f0b3c88b604d91532e8b547caadb589201e4088d",
+      "carrier": "vel8CFhuPJGFBddwY79DRowsrCZsPCDQRqKeEk4AEMsgNBS",
+      "courier": "vel2fA2FVjqgqiBvjbArSHa5mpDgkjhD77CCWquYNbEYuCg",
+      "candidates": [
+        "vel8CFhuPJGFBddwY79DRowsrCZsPCDQRqKeEk4AEMsgNBS",
+        "vel38HdEVR8vV5h4G5Kvct4pnuZDuWKJuA5HwrbrZubFyqk",
+        "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL"
+      ]
+    },
+    {
+      "shard": "4074e726040156624d3fb807eae92fea26749e774854ffc462202e14fabde089",
+      "carrier": "vel8CFhuPJGFBddwY79DRowsrCZsPCDQRqKeEk4AEMsgNBS",
+      "courier": "vel2fA2FVjqgqiBvjbArSHa5mpDgkjhD77CCWquYNbEYuCg",
+      "candidates": [
+        "vel8CFhuPJGFBddwY79DRowsrCZsPCDQRqKeEk4AEMsgNBS",
+        "vel3VcxSornAunvoUnwUXF7NXQ5FstzsEgoNdxmzm9hbhgs",
+        "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL"
+      ]
+    },
+    {
+      "shard": "e075fc47f375ccffea162b834c5e52268272eb5140319a0ccb9063d0ec82db61",
+      "carrier": "vel38HdEVR8vV5h4G5Kvct4pnuZDuWKJuA5HwrbrZubFyqk",
+      "courier": "vel38HdEVR8vV5h4G5Kvct4pnuZDuWKJuA5HwrbrZubFyqk",
+      "candidates": [
+        "vel38HdEVR8vV5h4G5Kvct4pnuZDuWKJuA5HwrbrZubFyqk",
+        "vel8CFhuPJGFBddwY79DRowsrCZsPCDQRqKeEk4AEMsgNBS",
+        "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL"
+      ]
+    },
+    {
+      "shard": "691ec0d9deaa276e17f7788654ebc77e9bb20d2ffce73be7ab336ae988da8c77",
+      "carrier": "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL",
+      "courier": "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL",
+      "candidates": [
+        "velDjtQKwijN8UCsnDAiNWaTos1yQn7ni1bLrX4tQikwoFL",
+        "vel8CFhuPJGFBddwY79DRowsrCZsPCDQRqKeEk4AEMsgNBS",
+        "vel2fA2FVjqgqiBvjbArSHa5mpDgkjhD77CCWquYNbEYuCg"
+      ]
+    }
+  ]
+}

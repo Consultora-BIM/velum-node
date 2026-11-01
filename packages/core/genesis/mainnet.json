@@ -1,0 +1,12 @@
+{
+  "v": 1,
+  "chain": "velum-mainnet-1",
+  "genesisTime": 1793566800000,
+  "reserve": {
+    "address": "vel9kKYC41QNcHfSSyd8EVSpWxJr3B7xoJ6V6yhP57wawmR",
+    "fingerprint": "b22a4ebcba0819a4"
+  },
+  "bridge": {
+    "address": "vel6es3NnYZrqaEdLgdXJnYfgmyFuSdKUAKGtcoCTUvFLpp"
+  }
+}

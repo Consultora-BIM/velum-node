@@ -1,0 +1,142 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "Génesis y 3 bloques aplicados con applyBlock: hashes de cabecera y raíz de estado esperados.",
+  "cases": [
+    {
+      "height": 0,
+      "hash": "ef9a789a65162e9f56d9a5ea7fbc4c62c3ecacb183d27995b8ceda7beaa13a72",
+      "stateRoot": "64142c3fc9f9ac71db84c46d7c706a333563088bd8b1f1658f5813630052e32a"
+    },
+    {
+      "block": {
+        "header": {
+          "chain": "velum-testnet-3",
+          "height": 1,
+          "prev": "ef9a789a65162e9f56d9a5ea7fbc4c62c3ecacb183d27995b8ceda7beaa13a72",
+          "ts": 1793493202000,
+          "slot": 1001,
+          "proposer": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+          "txRoot": "1029f7593b53856cc7db5665fbc99e1f1a846b9d48a0c49dc77ef1b555e687c1",
+          "receiptRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "presenceRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "stateRoot": "d7dc2ae84002bed998266035fff63e1c0dc0419a6b2d0e500ab7766c5c54c11b"
+        },
+        "hash": "1754eecd88bb7520a0f0df219eb759cbda3b635c89864eb7227a548e57aeab98",
+        "txs": [
+          {
+            "type": "register",
+            "chain": "velum-testnet-3",
+            "from": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "nonce": 0,
+            "ts": 1793494800000,
+            "name": "productor",
+            "payout": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "version": "2.0.0",
+            "sig": "e099179541497c6cb933bef8e19cd7d5de67b5d0328bb7e7396fea05ee132632e6889f6ccffcde74068247efcc136335928848edb8c36b4c4ac98f55e599df0a"
+          },
+          {
+            "type": "transfer",
+            "chain": "velum-testnet-3",
+            "from": "velBmtN6nS7TDRt7HzE3KZo2dsZEVbsKqgGiSmAt9dLPFnU",
+            "nonce": 0,
+            "ts": 1793494800000,
+            "to": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
+            "amount": 10000000,
+            "fee": 0,
+            "pow": 16086,
+            "sig": "6cbf0ca43997ba64d40302c822321a155dae4522d51833ab716d13dd44c32c395935fda1409792b93a2dbaa07ad5d78524a5aff5309299e7560d82c132ce780d"
+          }
+        ],
+        "receipts": [],
+        "presence": [],
+        "rewards": [],
+        "sig": "3ebc1a7502879c9ab5c1dbc417e0bf9de3af44cb1d9e2becc7eff09a65784cd7db839dc08e84a320e3e86ce4e3b6e6ca3b3095f02f98335781eba74db02b2f02"
+      },
+      "stateRoot": "d7dc2ae84002bed998266035fff63e1c0dc0419a6b2d0e500ab7766c5c54c11b",
+      "balances": {
+        "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm": {
+          "VEL": 10000000
+        },
+        "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK": {
+          "VEL": 0
+        }
+      }
+    },
+    {
+      "block": {
+        "header": {
+          "chain": "velum-testnet-3",
+          "height": 2,
+          "prev": "1754eecd88bb7520a0f0df219eb759cbda3b635c89864eb7227a548e57aeab98",
+          "ts": 1793493204000,
+          "slot": 1002,
+          "proposer": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+          "txRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "receiptRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "presenceRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "stateRoot": "3e7def11870873aad9265d63c481785c77aecbe868600eb37503f86862719456"
+        },
+        "hash": "221ed6f4c8cab6f890f69de2788136ef0bda3282cb447d48363e6e31f3fe6eb7",
+        "txs": [],
+        "receipts": [],
+        "presence": [],
+        "rewards": [],
+        "sig": "fac935036833d079fb0d7f5138e8a5d827ecf4d507cf5d4a9a6f5c816f04102832573c07e333a3f58266166e18eee45669f7b2aa4c812b96aa8b439664b12907"
+      },
+      "stateRoot": "3e7def11870873aad9265d63c481785c77aecbe868600eb37503f86862719456",
+      "balances": {
+        "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm": {
+          "VEL": 10000000
+        },
+        "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK": {
+          "VEL": 0
+        }
+      }
+    },
+    {
+      "block": {
+        "header": {
+          "chain": "velum-testnet-3",
+          "height": 3,
+          "prev": "221ed6f4c8cab6f890f69de2788136ef0bda3282cb447d48363e6e31f3fe6eb7",
+          "ts": 1793493206000,
+          "slot": 1003,
+          "proposer": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+          "txRoot": "78863d055f1e4492d80ada3989e0ff6ea0942e1aa067d967",
+          "receiptRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "presenceRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "stateRoot": "e6ebec4e5938f4ddf00b749aaac5312608906b11ea834eac75d0bcb2da6579cc"
+        },
+        "hash": "a9bde922676da4193b86f2dd5ca88e5c62318e9f03db30b3c234cba653ae67de",
+        "txs": [
+          {
+            "type": "transfer",
+            "chain": "velum-testnet-3",
+            "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
+            "nonce": 0,
+            "ts": 1793494800000,
+            "to": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "amount": 1000000,
+            "fee": 0,
+            "pow": 11892,
+            "sig": "9822f3636624bfd259406c77a19f56646f66a50d826377fdff9fd4800d9ee89d646fa5446634516d2167f364bdba5f1c061c8669407b096d2b61b7119ede790e"
+          }
+        ],
+        "receipts": [],
+        "presence": [],
+        "rewards": [],
+        "sig": "4d907518b0e59d5b65b9b99618728e18076581fe684f4a3607c52de1aa17e507ea2b8f8a43c7b4ddd537407a6a3e57c28b6410ec95e56a0ecfb34acc8da1df0a"
+      },
+      "stateRoot": "e6ebec4e5938f4ddf00b749aaac5312608906b11ea834eac75d0bcb2da6579cc",
+      "balances": {
+        "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm": {
+          "VEL": 9000000
+        },
+        "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK": {
+          "VEL": 1000000
+        }
+      }
+    }
+  ]
+}

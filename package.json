@@ -1,0 +1,12 @@
+{
+  "name": "velum-node",
+  "private": true,
+  "license": "Apache-2.0",
+  "workspaces": ["packages/*", "apps/node", "apps/bridge"],
+  "scripts": {
+    "test": "bun test packages apps/node/test apps/bridge/test",
+    "test:mainnet": "cd packages/core && bun run test:mainnet",
+    "e2e": "cd apps/node && bun run e2e",
+    "e2e:mainnet": "cd apps/node && bun run e2e:mainnet"
+  }
+}

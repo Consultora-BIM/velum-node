@@ -1,0 +1,26 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "Firma ed25519 sobre el JSON canónico sin 'sig' (signObj). Deterministas (RFC 8032).",
+  "cases": [
+    {
+      "secret": "4cc5e40e3887c17ccaa8f48da87e5262b84fc10d45dd6c1e324c48f8a8797794",
+      "address": "vel7VdKHXoksZcPPK6p9qw3TNseEztdUzLibY5UjPKdCEZH",
+      "body": {
+        "node": "vel7VdKHXoksZcPPK6p9qw3TNseEztdUzLibY5UjPKdCEZH",
+        "height": 7,
+        "ts": 1793494800000
+      },
+      "signed": {
+        "node": "vel7VdKHXoksZcPPK6p9qw3TNseEztdUzLibY5UjPKdCEZH",
+        "height": 7,
+        "ts": 1793494800000,
+        "sig": "53f2f699a330a3a047b882fd6bbbb2ae6dce948b7dfd5953196e6e8d17cbf33b51436ff74e595ea8bbcf50004fa2dbe5e8782eff6c29a4932eeae3f3192c3a0d"
+      },
+      "hello": {
+        "challenge": "hello|vel7VdKHXoksZcPPK6p9qw3TNseEztdUzLibY5UjPKdCEZH|1793494800000",
+        "sig": "1ca6a69f2191df7c698b2333160ea9680627d937a57e4b732bdc93c1d4b612a2e28ab80e8fb9f9773613cd824c04a20dcf398b97297398366f70f53c21b52400"
+      }
+    }
+  ]
+}

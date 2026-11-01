@@ -1,0 +1,130 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "Niveles v3: racha continua (> 2.880 épocas sin presencia la reinicia), presencia 90/95/98 %, meses de 43.200 épocas, Pilar M(t) = min(12, 6 + floor(edadRed/4)); peso = tipo(2|1) × floor(nivelPb × fianzaPb / 10⁶).",
+  "cases": [
+    {
+      "pillarMonths": [
+        [
+          0,
+          6
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          24,
+          12
+        ],
+        [
+          100,
+          12
+        ]
+      ]
+    },
+    {
+      "bondFactorBp": [
+        [
+          0,
+          10000
+        ],
+        [
+          1,
+          10000
+        ],
+        [
+          5000000000,
+          15000
+        ],
+        [
+          10000000000,
+          20000
+        ],
+        [
+          20000000000,
+          20000
+        ]
+      ]
+    },
+    {
+      "epoch": 0,
+      "presentEvery": "49 de 50",
+      "streak": {
+        "epochs": 1,
+        "present": 1,
+        "months": 0
+      },
+      "tier": "nuevo",
+      "weight": 100
+    },
+    {
+      "epoch": 43198,
+      "presentEvery": "49 de 50",
+      "streak": {
+        "epochs": 43199,
+        "present": 42336,
+        "months": 0
+      },
+      "tier": "nuevo",
+      "weight": 100
+    },
+    {
+      "epoch": 43199,
+      "presentEvery": "49 de 50",
+      "streak": {
+        "epochs": 43200,
+        "present": 42336,
+        "months": 1
+      },
+      "tier": "activo",
+      "weight": 130
+    },
+    {
+      "epoch": 129599,
+      "presentEvery": "49 de 50",
+      "streak": {
+        "epochs": 129600,
+        "present": 127008,
+        "months": 3
+      },
+      "tier": "veterano",
+      "weight": 170
+    },
+    {
+      "epoch": 259199,
+      "presentEvery": "49 de 50",
+      "streak": {
+        "epochs": 259200,
+        "present": 254016,
+        "months": 6
+      },
+      "tier": "veterano",
+      "weight": 170
+    },
+    {
+      "epoch": 302399,
+      "presentEvery": "49 de 50",
+      "streak": {
+        "epochs": 302400,
+        "present": 296352,
+        "months": 7
+      },
+      "tier": "pilar",
+      "weight": 200
+    },
+    {
+      "afterGapEpochs": 2881,
+      "streakStart": 305281,
+      "tier": "nuevo"
+    }
+  ]
+}

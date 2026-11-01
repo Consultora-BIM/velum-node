@@ -1,0 +1,133 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "Reclamaciones de trabajo v3: hoja {r, role} → sha512(canónico); hojas ORDENADAS por hash y sin repetir; árbol SHA-512 binario (impar: el último consigo mismo); raíz = sha512('velum/v3/root|' + count + '|' + cima); camino hoja→cima; muestras con baliza y posiciones de la prueba (muestra + vecina).",
+  "cases": [
+    {
+      "node": "velDcpM9CZiiTBMPfbR3r4noxdsT5pZvMPtigXeWTDZaPLZ",
+      "leaves": [
+        {
+          "r": {
+            "shard": "trozo-2",
+            "mailbox": "7878787878787878787878787878787878787878",
+            "rh": "a5dd34c47deef34a51f4be9dbd3e640a91460d84104bc665dd251a304aad3fda977d03d789483e2cb186c59a18f7df9a2feb18aa00ff19ada7b91a8acfdf7b75",
+            "secret": "f561120b130683e034dc90d522b2e6ff8632e21d6a4669ff4a41221628fdbd48",
+            "carrier": "velDcpM9CZiiTBMPfbR3r4noxdsT5pZvMPtigXeWTDZaPLZ",
+            "courier": "velDcpM9CZiiTBMPfbR3r4noxdsT5pZvMPtigXeWTDZaPLZ",
+            "ts": 1793494800000,
+            "ep": 2
+          },
+          "role": "carrier"
+        },
+        {
+          "r": {
+            "shard": "trozo-4",
+            "mailbox": "7878787878787878787878787878787878787878",
+            "rh": "a6d30b3119433cdfb5c589e8c6272239044bc4885068fd02f914c2d1715a5a898f9d3ff05e96cc5d9143f170b2af0d6719740387998eeb821a14a316d835fc88",
+            "secret": "04367518bd8b6c4f6da1d145c329836648a72ceaaa302c8e916d708ad368b299",
+            "carrier": "velDcpM9CZiiTBMPfbR3r4noxdsT5pZvMPtigXeWTDZaPLZ",
+            "courier": "velDcpM9CZiiTBMPfbR3r4noxdsT5pZvMPtigXeWTDZaPLZ",
+            "ts": 1793494800000,
+            "ep": 2
+          },
+          "role": "carrier"
+        },
+        {
+          "r": {
+            "shard": "trozo-0",
+            "mailbox": "7878787878787878787878787878787878787878",
+            "rh": "581c240a1868b504b89c08bdff84b49f724c865aadc964cecdb354c639a3e4c4556b8c78f3ec1183012b399549753395ecf67b36eeefb87385c9a8fe72d9ebf6",
+            "secret": "a8d9eebef6e5709b8167019938b170d3774c173e62a88f3bec8f4252886eef97",
+            "carrier": "velDcpM9CZiiTBMPfbR3r4noxdsT5pZvMPtigXeWTDZaPLZ",
+            "courier": "velDcpM9CZiiTBMPfbR3r4noxdsT5pZvMPtigXeWTDZaPLZ",
+            "ts": 1793494800000,
+            "ep": 2
+          },
+          "role": "carrier"
+        },
+        {
+          "r": {
+            "shard": "trozo-3",
+            "mailbox": "7878787878787878787878787878787878787878",
+            "rh": "340b1646f0adf2525816eba65353344a3eb5a0e645f7183dce7b2dd15629632a91514bdc36e679e0fc6cc589b6a0a975fca147a8862f34e8cc09cd12fd8b7a29",
+            "secret": "d04a3001f321394caf6898c6a52c3b3923721090c5f3e75253f956840bd83a6d",
+            "carrier": "velDcpM9CZiiTBMPfbR3r4noxdsT5pZvMPtigXeWTDZaPLZ",
+            "courier": "velDcpM9CZiiTBMPfbR3r4noxdsT5pZvMPtigXeWTDZaPLZ",
+            "ts": 1793494800000,
+            "ep": 2
+          },
+          "role": "courier"
+        },
+        {
+          "r": {
+            "shard": "trozo-1",
+            "mailbox": "7878787878787878787878787878787878787878",
+            "rh": "547f0e328dec6623669782914f982c8cb2f293dbce5faf5db0e545293629da72f92eb9dfece2b41ab0bdf95dcefd42e0c0c158ad9a84e7f59160edd7e79aa7a7",
+            "secret": "aba536c8e53b82939807d0c01908858602f054190289d4067aa7cab2285fe00b",
+            "carrier": "velDcpM9CZiiTBMPfbR3r4noxdsT5pZvMPtigXeWTDZaPLZ",
+            "courier": "velDcpM9CZiiTBMPfbR3r4noxdsT5pZvMPtigXeWTDZaPLZ",
+            "ts": 1793494800000,
+            "ep": 2
+          },
+          "role": "courier"
+        }
+      ],
+      "leafHashes": [
+        "4efb522080ef6397f84177c417f0f92a1a8640bced65c8f1101c8b26563155cdd72ceb33ffacdcdb030226225ab26a272e5ce6f5dee820c2cbea86002f4b99b6",
+        "8c86d6d44ef2d6b898940e87bac459bb70d701a2608fb72819c2ec8cf4fb8642f82761a3bde83629cecc1088aab6ef9fba193fb7d5730b6e49bdd75c0225815d",
+        "931a5ee2f95c77f35a7c9e4c8e68e034e50b3f89485b4484da65c731023923127b0bd5a56bde2466666f6bc8bf3cd36fbd6908d25a8f2cf08d5bbc3e0e504d70",
+        "c51860bf83b4da1374396b0eec68d053667bc51993dc0905a3af5981149952df859d9bceee4449e9639f4afff41f97a876631a5ef9fbe5658e431c200adb2dea",
+        "fafbb0e1f0350563e6dd17c2134010ac86ef614c628fd20ccc834d0117f11ffef4c59583ba70ec4ca15ddfeb99aa203839a355c0514463861a82596f22e4f793"
+      ],
+      "root": "0d2a39c727293fb6e3accde3aafd60cf7a5902ff53e816d0b7dcc4a5f26cafcafff6adb5d8eba59b89e749b313d79837f73162124759f35ed6c8963a41260c4a",
+      "count": 5,
+      "paths": [
+        [
+          "8c86d6d44ef2d6b898940e87bac459bb70d701a2608fb72819c2ec8cf4fb8642f82761a3bde83629cecc1088aab6ef9fba193fb7d5730b6e49bdd75c0225815d",
+          "aa2b916277240831774d94be50fda32bd0e135393d79c5cca15730a7bad0be4041e523dfb839bb6c7dff61f6ded50fa2df6f021db64d5eff525cde65cb3c2275",
+          "021cb3bd97bf57c6db391d1bfa56b660f6297f02660829972b54ede54d5b2085748589f2567f0fb7585b054bf8a9352756016e89df08934a35387c3180891d39"
+        ],
+        [
+          "4efb522080ef6397f84177c417f0f92a1a8640bced65c8f1101c8b26563155cdd72ceb33ffacdcdb030226225ab26a272e5ce6f5dee820c2cbea86002f4b99b6",
+          "aa2b916277240831774d94be50fda32bd0e135393d79c5cca15730a7bad0be4041e523dfb839bb6c7dff61f6ded50fa2df6f021db64d5eff525cde65cb3c2275",
+          "021cb3bd97bf57c6db391d1bfa56b660f6297f02660829972b54ede54d5b2085748589f2567f0fb7585b054bf8a9352756016e89df08934a35387c3180891d39"
+        ],
+        [
+          "c51860bf83b4da1374396b0eec68d053667bc51993dc0905a3af5981149952df859d9bceee4449e9639f4afff41f97a876631a5ef9fbe5658e431c200adb2dea",
+          "2af6672d9165aa1497fcc7a2ec0a8cfffba0b881cd459478b2a148e0ad67913cccf4cdeb128059a1973536f31fb783180e74302e382f89b5e32005fdf3db4942",
+          "021cb3bd97bf57c6db391d1bfa56b660f6297f02660829972b54ede54d5b2085748589f2567f0fb7585b054bf8a9352756016e89df08934a35387c3180891d39"
+        ],
+        [
+          "931a5ee2f95c77f35a7c9e4c8e68e034e50b3f89485b4484da65c731023923127b0bd5a56bde2466666f6bc8bf3cd36fbd6908d25a8f2cf08d5bbc3e0e504d70",
+          "2af6672d9165aa1497fcc7a2ec0a8cfffba0b881cd459478b2a148e0ad67913cccf4cdeb128059a1973536f31fb783180e74302e382f89b5e32005fdf3db4942",
+          "021cb3bd97bf57c6db391d1bfa56b660f6297f02660829972b54ede54d5b2085748589f2567f0fb7585b054bf8a9352756016e89df08934a35387c3180891d39"
+        ],
+        [
+          "fafbb0e1f0350563e6dd17c2134010ac86ef614c628fd20ccc834d0117f11ffef4c59583ba70ec4ca15ddfeb99aa203839a355c0514463861a82596f22e4f793",
+          "081a20e73d408330296f1491f9a3741bf59c0124c0f287e0b8deda903fa4f2a5b29c58039093a156f661772b6d440f645dac3d122a1063e5fe52346d0a7bc51d",
+          "a19dfe8fff7f71309773f95908ee240aab46fd5d06006be302856320fbb60dd3f85e90ea682a40f258399f1d23af83b75a6a954d04be7f96524dda428c33b10f"
+        ]
+      ],
+      "beacon": "413138ff2f32a9a6c2d70fbe30edf9416d0ce2428d479a5b8c9c3da21f3ec516",
+      "epoch": 2,
+      "samples": [
+        0,
+        2,
+        3,
+        4,
+        1
+      ],
+      "proofIndices": [
+        0,
+        1,
+        2,
+        3,
+        3,
+        4,
+        4,
+        1,
+        2
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@velum/node",
+  "private": true,
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "velum-node": "src/main.ts"
+  },
+  "scripts": {
+    "start": "bun src/main.ts start",
+    "test": "bun test test",
+    "e2e": "VELUM_NETWORK=testnet bun scripts/e2e.ts",
+    "build": "bun scripts/build.ts",
+    "install-test": "bun scripts/install-test.ts",
+    "e2e:mainnet": "bun scripts/e2e-mainnet.ts"
+  },
+  "dependencies": {
+    "@velum/core": "workspace:*"
+  }
+}

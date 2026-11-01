@@ -1,0 +1,42 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "Raíz de Merkle SHA-256 (hojas hex; impar = se duplica la última; vacía = 64 ceros).",
+  "cases": [
+    {
+      "leaves": [],
+      "root": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "leaves": [
+        "3a959959e1820a887a9f5c1d6b8a6ced593181040c71dbfcd7da921ec198f773"
+      ],
+      "root": "3a959959e1820a887a9f5c1d6b8a6ced593181040c71dbfcd7da921ec198f773"
+    },
+    {
+      "leaves": [
+        "3a959959e1820a887a9f5c1d6b8a6ced593181040c71dbfcd7da921ec198f773",
+        "441421b96035610c6dded64d6b6bd85cc0264a7370e9961474868c6f98162bd8"
+      ],
+      "root": "86c5922f147a1d529d19f359afe1767c4bad36d4875e692133399d94e5a30283"
+    },
+    {
+      "leaves": [
+        "3a959959e1820a887a9f5c1d6b8a6ced593181040c71dbfcd7da921ec198f773",
+        "441421b96035610c6dded64d6b6bd85cc0264a7370e9961474868c6f98162bd8",
+        "7645cf6d2853903fe66158f15baa958017010a63012c4038f46d58a1f37a16cd"
+      ],
+      "root": "02b600eccb49f1955d293aff8f002d828debeaa4ef3875323aa9e5e9c7eb3047"
+    },
+    {
+      "leaves": [
+        "3a959959e1820a887a9f5c1d6b8a6ced593181040c71dbfcd7da921ec198f773",
+        "441421b96035610c6dded64d6b6bd85cc0264a7370e9961474868c6f98162bd8",
+        "7645cf6d2853903fe66158f15baa958017010a63012c4038f46d58a1f37a16cd",
+        "f56fef95ca10fca99ab4c7c370a64053afabb390972eda7d91706b9498bea74d",
+        "f51520130e5ca368415aa8b2f53a75de41dde4a0ff8c5de5f80461e1b2ee5200"
+      ],
+      "root": "4e74b250b70a5e8f0344b8204f7194f1de740496ce325a2e69e5f5222622ff3f"
+    }
+  ]
+}

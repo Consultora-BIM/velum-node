@@ -1,0 +1,429 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "Cadena v3: génesis y 31 bloques (alta, fianza, pago con sello, pago con comisión tras fijar precio, orden y cierre de época). Hash y raíz de estado por bloque; reparto y conservación.",
+  "cases": [
+    {
+      "height": 0,
+      "hash": "ef9a789a65162e9f56d9a5ea7fbc4c62c3ecacb183d27995b8ceda7beaa13a72",
+      "stateRoot": "64142c3fc9f9ac71db84c46d7c706a333563088bd8b1f1658f5813630052e32a"
+    },
+    {
+      "block": {
+        "header": {
+          "chain": "velum-testnet-3",
+          "height": 1,
+          "prev": "ef9a789a65162e9f56d9a5ea7fbc4c62c3ecacb183d27995b8ceda7beaa13a72",
+          "ts": 1793493202000,
+          "slot": 1001,
+          "proposer": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+          "txRoot": "7c6238150502f747d6f8e211c237f157c2aefe974e19a11c56ea04209954e751",
+          "receiptRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "presenceRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "stateRoot": "9e1853f1e88bdab578e82726cc7796a9169f7f09558095bac9b38b9d405d60a0"
+        },
+        "hash": "1d78b4cf0638b18805adaa12eaded1ca1ba0169f975c388a87761fe8fcb427d2",
+        "txs": [
+          {
+            "type": "register",
+            "chain": "velum-testnet-3",
+            "from": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "nonce": 0,
+            "ts": 1793494800000,
+            "name": "productor",
+            "payout": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "version": "3.0.0",
+            "region": "EU",
+            "sig": "ccbc7359c0e6e7a87d6f4dd4c8f12deb99f4315bda8c078f06978d4d649824aabd2cb26140068a23cbe80c48d2d3e3fad005b6b738b8580adf2bcb911298e404"
+          },
+          {
+            "type": "transfer",
+            "chain": "velum-testnet-3",
+            "from": "velBmtN6nS7TDRt7HzE3KZo2dsZEVbsKqgGiSmAt9dLPFnU",
+            "nonce": 0,
+            "ts": 1793494800000,
+            "to": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
+            "amount": 3000000000,
+            "fee": 0,
+            "pow": 38755,
+            "sig": "0750fe1fccf5f9c2cda8a7b2cb335e2d2b0e530bacfc7ea1e44c1296acb5e53a0f748e2d1941b26f1bb6d40ad31e2eea8536a28932127e84147ee9b4655e6e0a"
+          },
+          {
+            "type": "transfer",
+            "chain": "velum-testnet-3",
+            "from": "velBmtN6nS7TDRt7HzE3KZo2dsZEVbsKqgGiSmAt9dLPFnU",
+            "nonce": 1,
+            "ts": 1793494800000,
+            "to": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "amount": 200000000,
+            "fee": 0,
+            "pow": 110965,
+            "sig": "615a488d30f998160e405d4c4eb8ae3479aee4de18284b50e173c5050a374fd18cbdf42e3306e18e5d805ba429b769163c3d310e993fac7e64a11a0f660df00f"
+          }
+        ],
+        "receipts": [],
+        "presence": [],
+        "rewards": [],
+        "sig": "0bf8fc01a540d78106ea609bfdead13f335ede5c9fdf3e9faf6709721f3ca1ed31c5bd82739c6ab07a78656912a951e47ff5c1acc902f203ec77a0ca8a20ae0c"
+      },
+      "stateRoot": "9e1853f1e88bdab578e82726cc7796a9169f7f09558095bac9b38b9d405d60a0",
+      "ledgerGap": 0
+    },
+    {
+      "block": {
+        "header": {
+          "chain": "velum-testnet-3",
+          "height": 2,
+          "prev": "1d78b4cf0638b18805adaa12eaded1ca1ba0169f975c388a87761fe8fcb427d2",
+          "ts": 1793493204000,
+          "slot": 1002,
+          "proposer": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+          "txRoot": "1ae7d5a90ad997bee92b935c5963ed7d017c92c4d683d9b2fe30d236d485717e",
+          "receiptRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "presenceRoot": "f92a03040ad9c1fdf65b5af1105b8e1781a15d0a1058da59a5ac256f0f0e7a66",
+          "stateRoot": "966d2b339b2c37f218277cbcfe6779f4070101bea69bdee6945672dfad787c65"
+        },
+        "hash": "3067f9143a717f3f21c01ad9c1b62709019e371a8869d777f63c42de4c628f24",
+        "txs": [
+          {
+            "type": "node.bond",
+            "chain": "velum-testnet-3",
+            "from": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "nonce": 1,
+            "ts": 1793494800000,
+            "amount": 100000000,
+            "sig": "55dd057dddf64711397675166d4c3f0cec2346f35b4e620374c21450c6c169da64e4499352c5d7e3c5f24ddc0c61c577f0107a0b2f27e3f62a70ea2bcd198d0d"
+          },
+          {
+            "type": "order.place",
+            "chain": "velum-testnet-3",
+            "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
+            "nonce": 0,
+            "ts": 1793494800000,
+            "pair": "VEL/tEUR",
+            "side": "sell",
+            "price": 2000000,
+            "amount": 2000000000,
+            "pow": 8757,
+            "sig": "0a0851f7ac8cb14fdc30365a260d2dad6f5a4122b609e38d7ba59c8ae667d5f808838a352fd53470a141dc1cc016eb2077d904f05659cb9ec954606093f1e703"
+          },
+          {
+            "type": "order.place",
+            "chain": "velum-testnet-3",
+            "from": "velBmtN6nS7TDRt7HzE3KZo2dsZEVbsKqgGiSmAt9dLPFnU",
+            "nonce": 2,
+            "ts": 1793494800000,
+            "pair": "VEL/tEUR",
+            "side": "buy",
+            "price": 2000000,
+            "amount": 1200000000,
+            "pow": 211821,
+            "sig": "362ddd1cc515f13eabb7422a0f8ed6405e9547699b1cc31c396b526291598e7ec5045e189e66e6e110f46e28410f5bc6493e1faa9b75cccc359fa28a5e1d6706"
+          }
+        ],
+        "receipts": [],
+        "presence": [
+          {
+            "node": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "height": 1,
+            "ts": 1793493204000,
+            "sig": "aa8a306d29a3a2c591e73eba082e4c8e2808379a507e9e12dc321a41c395f77c9106e1dd7e79b118c430be2504ed78559ec938919b11afa12fd75b857cde6e0b"
+          }
+        ],
+        "rewards": [],
+        "sig": "837986abefaabb2a0c283e6cd896d13e36ca932a6aee3229cea0cea7c0e3b43699df4fd097d7e8b843a561f36bf0d4a0126656c818415df071200b5ac7c9a80c"
+      },
+      "stateRoot": "966d2b339b2c37f218277cbcfe6779f4070101bea69bdee6945672dfad787c65",
+      "ledgerGap": 0
+    },
+    {
+      "block": {
+        "header": {
+          "chain": "velum-testnet-3",
+          "height": 3,
+          "prev": "3067f9143a717f3f21c01ad9c1b62709019e371a8869d777f63c42de4c628f24",
+          "ts": 1793493206000,
+          "slot": 1003,
+          "proposer": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+          "txRoot": "f2220f94b750e77f5ec5aaaa0a7af88fcd77a091286c9275",
+          "receiptRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "presenceRoot": "d13874a7d219177a47bfa60140bf5ce30291241d3696cacef50819f153177f5c",
+          "stateRoot": "8395d1d394651cacee0459f76d1aef1c45f8c39f6deaa1d29493a759e63a9e8e"
+        },
+        "hash": "18670217c4ec7299fb1d2302e3ead1bda1bcdc70e4fb3ca70468055dfe50ee28",
+        "txs": [
+          {
+            "type": "token.create",
+            "chain": "velum-testnet-3",
+            "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
+            "nonce": 1,
+            "ts": 1793494800000,
+            "symbol": "VECT",
+            "name": "Vector",
+            "decimals": 2,
+            "maxSupply": 10000,
+            "initial": 100,
+            "mintable": false,
+            "fee": 100000000,
+            "sig": "994889426b1b895ace67f9b015df0b2c1fcfaff3c42142e3e3221522c2a28c3210242d337013dc3824ad48fe06a4bd6a056eaae437c2d6531ac9246f27e0060b"
+          }
+        ],
+        "receipts": [],
+        "presence": [
+          {
+            "node": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "height": 2,
+            "ts": 1793493206000,
+            "sig": "53e9345a74ab10d817707f00fd81cab54f10faf7754dc73a5ddf3d6ee354270712d312a0816266e962cb60306a706748a81b65db72c3bc2236c3710956edb307"
+          }
+        ],
+        "rewards": [],
+        "sig": "7270778078dcde092ce1c678155638d7a33104d4376c5b6302818a06bffb465da10dc13fff000064be370e39bafdff433206da1ff952dd5f2cd7d0d1070ee003"
+      },
+      "stateRoot": "8395d1d394651cacee0459f76d1aef1c45f8c39f6deaa1d29493a759e63a9e8e",
+      "ledgerGap": 0
+    },
+    {
+      "height": 4,
+      "hash": "353a642703387e0c45768c3a1386adc2f4f2edd41e5ae58d26bcdb786a8e0769"
+    },
+    {
+      "height": 5,
+      "hash": "3f0ed34f0733ccb750e3d4e37169059b4848f1833a6a7a090747fe4bc0d7b98c"
+    },
+    {
+      "height": 6,
+      "hash": "8635e6d33acd8d514914638d2f4d5c67481784baaa0d57b08b3e529c8ff61421"
+    },
+    {
+      "height": 7,
+      "hash": "919afe6c498e3b610aa9f2a66dd3070084e1332b22b04361b8b94960bf91a4ce"
+    },
+    {
+      "height": 8,
+      "hash": "b3a3dd86697a469956935750632512f47c15797fe24a7fedea318064d4166554"
+    },
+    {
+      "height": 9,
+      "hash": "976e40dea915937d4bd379cf338f4e65eb94f02b156bcd3225696ee7c5463ad9"
+    },
+    {
+      "height": 10,
+      "hash": "2ef80aedd800eb88ba4b0824228dc820659608393253e1073aec2f36e40b2391"
+    },
+    {
+      "height": 11,
+      "hash": "c511c3185dbbbb34d253519eb52933973fe4b258038a34ea18d5e294313db974"
+    },
+    {
+      "height": 12,
+      "hash": "8497af174e3511020792a28b658a682ef79ffe588b36968610fd1644c46fc66f"
+    },
+    {
+      "height": 13,
+      "hash": "8b258d47fa8a943772dbf5308f062daa52dc0fb957fdd15361d49e8aca4f873f"
+    },
+    {
+      "height": 14,
+      "hash": "a1665fd17cf6d8f15fbf86fd62172ae1835844eff5061daef08bf3dfca219838"
+    },
+    {
+      "height": 15,
+      "hash": "c29a54a1d0fb7c685245117db2d35370ba389d8a6a7daefc8ac82a192592ac42"
+    },
+    {
+      "height": 16,
+      "hash": "6e0cc526ea43c60a80d60fb2360300bc6595fa31ea1c4a1416458fe8973ce7d3"
+    },
+    {
+      "height": 17,
+      "hash": "b91e9102c3c8d3127b32a5605f08315e31c73c1bbb519d117ecd8e358030de58"
+    },
+    {
+      "height": 18,
+      "hash": "9a7293bc857425cd49c63fb3c0a816402af187ba21698f07da2effe33aece258"
+    },
+    {
+      "height": 19,
+      "hash": "0f8bbb1985108ac2cf4efde8ce1446e82d261c4117633851d29d6f0494116a18"
+    },
+    {
+      "height": 20,
+      "hash": "8f63f2f396ea750ad533082a5fcb52e90b34b4359d0d1f66df297ab9d0d1cb95"
+    },
+    {
+      "height": 21,
+      "hash": "b30b45faa05d9eac8a889e77776d3a59cdddba8e883f9519bdf2b56503207d67"
+    },
+    {
+      "height": 22,
+      "hash": "a0a3bdb2ec58527c8233c7c70b87178aa84b823d012d592d5d927b547a9ff7be"
+    },
+    {
+      "height": 23,
+      "hash": "7325dc70dd13cac20e94879f66eb7e0804e83359f2fec75762535f0a9671e6cb"
+    },
+    {
+      "height": 24,
+      "hash": "c7f8a32ed80b8ebe8aa51338c20897746125744ea53c1acd1ee32f35fa3d26c1"
+    },
+    {
+      "height": 25,
+      "hash": "c1adba16ede6fa8ee4c453709fbe866ec7d64351947d7134c4974ddd0bdf5a37"
+    },
+    {
+      "height": 26,
+      "hash": "b06b902b8771ac3ec62f8db7fc772d407b390dba6d9d00e14e9693778099f95b"
+    },
+    {
+      "height": 27,
+      "hash": "72391414cb4de0851c9f8f7e893a8bb740e9a50f4c610f8f956eb119adc28e8c"
+    },
+    {
+      "height": 28,
+      "hash": "6ab7b0d46b6c105c62f62e5cc95bdc1ad86babf07c0c97c145f34b1014b7f203"
+    },
+    {
+      "height": 29,
+      "hash": "e91fe8cf2b3bda995ae9666da4493f5b30ff25965b226ce9213813a6d06e5269"
+    },
+    {
+      "block": {
+        "header": {
+          "chain": "velum-testnet-3",
+          "height": 30,
+          "prev": "e91fe8cf2b3bda995ae9666da4493f5b30ff25965b226ce9213813a6d06e5269",
+          "ts": 1793493260000,
+          "slot": 1030,
+          "proposer": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+          "txRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "receiptRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "presenceRoot": "ea2c22f97f169627884707bec8c12b2166d1e6cea8f1892a42f414927e6bded5",
+          "stateRoot": "ab830d5b950e3de00b07369b2d875c4554c504436ca6474c0fb1f0a7c15f9be0"
+        },
+        "hash": "9842e7923d909455ee2da3f23c312236f0e13599403ba5a70f3f60e7f04ecc47",
+        "txs": [],
+        "receipts": [],
+        "presence": [
+          {
+            "node": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "height": 29,
+            "ts": 1793493260000,
+            "sig": "1c048c0d2c0ca5f6a69b9ba605bedad38f11d29b86394ad6fb5bcc0247c0996420bec7722c46e18789729ca06cface0022fae3e47eaeffb2422e107fa274570d"
+          }
+        ],
+        "rewards": [
+          {
+            "node": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "payout": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "amount": 64227328,
+            "shards": 0,
+            "tier": "nuevo",
+            "epoch": 0,
+            "kind": "producer"
+          }
+        ],
+        "sig": "844f573e673601a88246b9158003d617129c8b5e307508677558905bed42826b29dd3a978d0d022086ff70c1700fc265a5a9320d146ffebfd4517e7816825b0d"
+      },
+      "stateRoot": "ab830d5b950e3de00b07369b2d875c4554c504436ca6474c0fb1f0a7c15f9be0",
+      "ledgerGap": 0
+    },
+    {
+      "block": {
+        "header": {
+          "chain": "velum-testnet-3",
+          "height": 31,
+          "prev": "9842e7923d909455ee2da3f23c312236f0e13599403ba5a70f3f60e7f04ecc47",
+          "ts": 1793493262000,
+          "slot": 1031,
+          "proposer": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+          "txRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "receiptRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "presenceRoot": "3baa0a45c6da5f6be92914876d206d0ec05e82b4108531e16df679e092861a5b",
+          "stateRoot": "6fa7799c94bfbbecb01208e6194ec5ffb2f84bd2c8d3d525ab799a0006ce9954"
+        },
+        "hash": "3712ff990d1ad63385e83c8fd5ed38f0bce0c81221545a0409c4d22d6a1eb78f",
+        "txs": [],
+        "receipts": [],
+        "presence": [
+          {
+            "node": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+            "height": 30,
+            "ts": 1793493262000,
+            "sig": "050d291ce1774eef5c05c8ef19e47dfcca8fdad8504e77695c3d691591c9dfd70e932e766f8cf0fb1799d14bae76153a784b76ac4865b84a8caa6b396780ed0c"
+          }
+        ],
+        "rewards": [],
+        "sig": "9400efcbf9a03aaee26c9a1004c468db83189ae2680e37af4888ecddb056cd24a8929a6dd757c177ab490c2b2178373c4be26b5404f6697271fc79ae87661c09"
+      },
+      "stateRoot": "6fa7799c94bfbbecb01208e6194ec5ffb2f84bd2c8d3d525ab799a0006ce9954",
+      "ledgerGap": 0
+    },
+    {
+      "oracle": {
+        "epoch": 0,
+        "eur": 2000000,
+        "usd": 2173913,
+        "usdt": 2173913,
+        "src": {
+          "eur": "twap",
+          "usd": "cross",
+          "usdt": "cross"
+        },
+        "twap": {
+          "eur": 2000000,
+          "usd": null,
+          "usdt": null
+        },
+        "volume": {
+          "eur": 1200000000,
+          "usd": 0,
+          "usdt": 0
+        },
+        "fx": 920000
+      },
+      "pow": {
+        "bits": 16,
+        "prev": 16,
+        "used": 0
+      },
+      "workPots": {
+        "0": 363954863
+      },
+      "supply": {
+        "max": 1000000000000000,
+        "minted": 100000428082191,
+        "burned": 0,
+        "circulating": 100000428082191,
+        "remainingToMint": 899999571917809,
+        "feesCollected": 100000000,
+        "pool": 0,
+        "workPots": 363954863,
+        "reserve": 99900000,
+        "reserveAddress": "vel_reserve",
+        "reserveIn": 100000000,
+        "reserveOut": 100000,
+        "epoch": 1,
+        "emission": 428082191,
+        "halvings": 0,
+        "nextHalvingEpoch": 1051200,
+        "poolAddress": "vel_pool"
+      },
+      "bigTransfer": {
+        "tx": {
+          "type": "transfer",
+          "chain": "velum-testnet-3",
+          "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
+          "nonce": 2,
+          "ts": 1793494800000,
+          "to": "velGGxCGi56wFyQfBTaZLzHoqGBaGL7PxaE42cEogH3CKcK",
+          "amount": 600000000,
+          "fee": 60000,
+          "sig": "f1dedf902fd9811bec19c5a2ef13f8af21c1c84d9670bcab76f846e1ef86754233755babdd4cb3acbc72efcd30cb64e4fb5e30a3a1d5cca0a59313a608671104"
+        },
+        "fee": 60000,
+        "applies": null
+      }
+    }
+  ]
+}

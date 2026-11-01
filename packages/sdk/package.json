@@ -1,0 +1,17 @@
+{
+  "name": "@velum/sdk",
+  "version": "0.1.0",
+  "description": "SDK público de Velum para carteras, exchanges, custodios y carteras físicas: claves, direcciones, transacciones, firma y RPC.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "bun test test" },
+  "dependencies": {
+    "@velum/core": "workspace:*",
+    "@noble/hashes": "2.4.0",
+    "@noble/curves": "2.4.0",
+    "@scure/bip39": "2.4.0"
+  }
+}

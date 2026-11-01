@@ -1,0 +1,29 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "Frase BIP-39 → semilla. Cartera = SLIP-10 ed25519 m/44'/7420'/0'/0'/0'. Identidad y buzón base = HKDF-SHA512. Direcciones = 'vel' + base58(ed25519 pub).",
+  "cases": [
+    {
+      "phrase": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art",
+      "seed": "408b285c123836004f4b8842c89324c1f01382450c0d439af345ba7fc49acf705489c6fc77dbd4e3dc1dd8cc6bc9f043db8ada1e243c4a0eafb290d399480840",
+      "identity": {
+        "secret": "2d8c2a13c65ca376363f5e513008579ef7309b1ce5d2b77c26e00e7e61deeced",
+        "publicKey": "d44d9a54c351f4b4f19ee3bf27cb07aeafc71befce4df724722017e83e20f93a",
+        "address": "velFHk4jFgZ589ZjYBVmsQCPtYjT5chnYRumWp2LMLHhq4m"
+      },
+      "wallet": {
+        "secret": "2f84fb3642676246755fda15c0381bcd6ed1972d65440551afab42676536ef4f",
+        "publicKey": "a8fa068d005dfd5ef2c1952a94e5a5a9ed5e37bec7da82c443cedd3662f212e6",
+        "address": "velCNccnzxszvsSnXWTL58GdbDv2ixAszjKDzmqUdF2VXcH"
+      },
+      "mailboxBase": "3fb18c99ddc746f854566058c56ef4492285c95199b2e85efeca78aa9be1e453"
+    },
+    {
+      "note": "keyPairFromText: secreto = sha256(texto) (solo grifo y pruebas)",
+      "text": "velum-testnet-1/faucet",
+      "secret": "df6669901faada98558144b60eb7d06b26442356d40922dbd0a915dbc5666d80",
+      "publicKey": "a014808886e95e53c5fb74c005396656d15a75a40c86a4923e70c4c97cc32ae5",
+      "address": "velBmtN6nS7TDRt7HzE3KZo2dsZEVbsKqgGiSmAt9dLPFnU"
+    }
+  ]
+}

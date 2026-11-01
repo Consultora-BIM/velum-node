@@ -1,0 +1,57 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "Transacciones firmadas con la clave de cartera (ed25519 sobre JSON canónico sin 'sig'). txId = sha256(canónico)[0..48].",
+  "cases": [
+    {
+      "tx": {
+        "type": "transfer",
+        "chain": "velum-testnet-3",
+        "from": "velBmtN6nS7TDRt7HzE3KZo2dsZEVbsKqgGiSmAt9dLPFnU",
+        "nonce": 0,
+        "ts": 1793494800000,
+        "to": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
+        "amount": 5000000,
+        "fee": 0,
+        "memo": "hola",
+        "pow": 25240,
+        "sig": "661aa55169306b2d71b8d1005951667cdb700bf22781f8ed43f412ddb7d09d2e85387705b0e7f1fd062beb2a880c6f3509e1b6c0e2b52c16a9374e3a514fe50d"
+      },
+      "txId": "b62402211949648cf1ac464612fa73022d1820c6098d9aee",
+      "checkTx": null
+    },
+    {
+      "tx": {
+        "type": "transfer",
+        "chain": "velum-testnet-3",
+        "from": "velBmtN6nS7TDRt7HzE3KZo2dsZEVbsKqgGiSmAt9dLPFnU",
+        "nonce": 1,
+        "ts": 1793494800000,
+        "to": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
+        "amount": 7000000,
+        "fee": 0,
+        "token": "tEUR",
+        "pow": 17476,
+        "sig": "8aec51c55d88598bc1b9a675ae21af5eef7f64582d5d3084df454dd72ec1c4d9a392347541a7bdf19571eac04d2027d449b4adfdd78e605b6d5aac33555e2602"
+      },
+      "txId": "c7991deec8f576fe3f23608297a0445836bd53e895c12704",
+      "checkTx": null
+    },
+    {
+      "tx": {
+        "type": "register",
+        "chain": "velum-testnet-3",
+        "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
+        "nonce": 0,
+        "ts": 1793494800000,
+        "name": "nodo-vector",
+        "payout": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
+        "version": "2.0.0",
+        "kind": "light",
+        "sig": "d0a18106c8d7a401ca9f527c9a213ff8b47edd03633e42d10ff84f4199e5462a07cdd94adda6d823c696bb4bcaf934fa3c26477ece0e6ed93f1f7f70f9a98a03"
+      },
+      "txId": "78101ed6dc333042538e0da1256c1db8e8ce6f18659363b1",
+      "checkTx": null
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "JSON canónico (claves ordenadas, sin espacios, sin undefined) y SHA-256 hex de ese texto (hashObj).",
+  "cases": [
+    {
+      "value": {
+        "b": 1,
+        "a": [
+          3,
+          {
+            "d": "é",
+            "c": null
+          }
+        ]
+      },
+      "canonical": "{\"a\":[3,{\"c\":null,\"d\":\"é\"}],\"b\":1}",
+      "sha256": "94b023b03bec14c9529f32f074e33efe576be6c90efe485e1202357a404c9cbe"
+    },
+    {
+      "value": {
+        "z": true,
+        "y": "línea\n",
+        "x": 1.5
+      },
+      "canonical": "{\"x\":1.5,\"y\":\"línea\\n\",\"z\":true}",
+      "sha256": "4269ce3c20a78a42102dff4fc486bbb5c239abe7c433134fa87df4d5cbe7787f"
+    },
+    {
+      "value": [],
+      "canonical": "[]",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "value": "texto",
+      "canonical": "\"texto\"",
+      "sha256": "c74f5ca56068305fee1f6e060d2491699239ee44fd84f05f9a8a8afec75da65f"
+    },
+    {
+      "value": 0,
+      "canonical": "0",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+    }
+  ]
+}

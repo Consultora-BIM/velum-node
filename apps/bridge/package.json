@@ -1,0 +1,24 @@
+{
+  "name": "@velum/bridge",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun src/main.ts",
+    "test": "bun test test",
+    "firmar": "bun scripts/firmar-retiros.ts",
+    "emitir": "bun scripts/emitir-retiros.ts",
+    "clave": "bun scripts/clave-puente.ts"
+  },
+  "dependencies": {
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "@scure/base": "2.4.0",
+    "@scure/bip32": "^2",
+    "@scure/bip39": "2.4.0",
+    "@velum/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.0"
+  }
+}

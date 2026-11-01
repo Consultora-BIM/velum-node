@@ -1,0 +1,29 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "Buzón del día = hex(HMAC-SHA512(seed, 'day:'+día))[0..40]; mbAuth = mbPub + t·G; prueba de apertura = ed25519 con s+t.",
+  "cases": [
+    {
+      "mailboxBase": "3fb18c99ddc746f854566058c56ef4492285c95199b2e85efeca78aa9be1e453",
+      "deviceId": "0011223344556677",
+      "salt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "derived": {
+        "seed": "90fa8aa6654dcaa9e87396495d623c72ae94d31905cbaeb9da55213c194057e7",
+        "pub": "4e2411bf45e24932782f59092ac8a1f6fc0f85ef10c561c0720f93ff3b82a3f6",
+        "scalar": "08539dec29203f29c66c405e048bb5d8ac879cd22bfb544e0c0af1ef7dac5e09",
+        "nonceKey": "9ef5e28d15c061e49a999e14ab14a7c75864cab5a9c7fc4aee59e533f31fd2c2"
+      },
+      "day": 20758,
+      "mailbox": "ef633b21b4556e7d991019f912cad070f59e77c0",
+      "mbAuth": "73d3341a1d4e0fe6828c8ada21b6234de5012ea233ec5d29aaeab82c5657551f",
+      "openChallenge": "velum/v2/open|ef633b21b4556e7d991019f912cad070f59e77c0|1793494800000",
+      "proof": {
+        "mailbox": "ef633b21b4556e7d991019f912cad070f59e77c0",
+        "auth": "73d3341a1d4e0fe6828c8ada21b6234de5012ea233ec5d29aaeab82c5657551f",
+        "ts": 1793494800000,
+        "sig": "844b27b5d78bec8468ed96ce67c6d32902627ea3ae44403fcc468e41a23e1d65056db2cfe453738bbdab3a18f4d95354078d79ada29cd44be52a1c564a4e7002"
+      },
+      "proofValid": true
+    }
+  ]
+}

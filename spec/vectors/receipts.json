@@ -1,0 +1,37 @@
+{
+  "protocol": 3,
+  "chain": "velum-testnet-3",
+  "description": "Recibo v2 anónimo: secret = HMAC-SHA512(rseed, shardId)[0..32]; válido si sha512(secret) == rh. receiptId = rh[0..48].",
+  "cases": [
+    {
+      "rseed": "1212121212121212121212121212121212121212121212121212121212121212",
+      "receipt": {
+        "shard": "trozo-a",
+        "mailbox": "3434343434343434343434343434343434343434",
+        "rh": "de9619fe592d1e5b73ea713f99a026bda4fb079837fe0710a7ba4c33902c9df736c382542d231e494125f02feab734e9087f1d3bd70102c1f6f86b5304ed4d11",
+        "secret": "f584e8ffcbfb45360e6f98d6908990ece184a2eae0a43ce5041498102d3958a0",
+        "carrier": "vel3Hov8PRDQ6nYFQYv7JRj8yjqo5Y4uikAgK2fQRY3K7iz",
+        "courier": "vel4mPb1v4DUS7E3zVAizdS1cVSMABbakGp7q3mKDKJemx2",
+        "ts": 1793494800000,
+        "ep": 3
+      },
+      "receiptId": "de9619fe592d1e5b73ea713f99a026bda4fb079837fe0710",
+      "valid": true
+    },
+    {
+      "rseed": "1212121212121212121212121212121212121212121212121212121212121212",
+      "receipt": {
+        "shard": "trozo-b",
+        "mailbox": "3434343434343434343434343434343434343434",
+        "rh": "ea6419c4a5081338c170907e03ac48832338b549a5402a89b962877d6b0f7595437a83eae416cda2f3f1386afc21262962a82b11aa47cc5ca7b70fd258e6bd21",
+        "secret": "7d641e772b28bd0fb21b4066cf6a2bed3b7536d952472f6e30153c541115a2d1",
+        "carrier": "vel3Hov8PRDQ6nYFQYv7JRj8yjqo5Y4uikAgK2fQRY3K7iz",
+        "courier": "vel4mPb1v4DUS7E3zVAizdS1cVSMABbakGp7q3mKDKJemx2",
+        "ts": 1793494800000,
+        "ep": 3
+      },
+      "receiptId": "ea6419c4a5081338c170907e03ac48832338b549a5402a89",
+      "valid": true
+    }
+  ]
+}
