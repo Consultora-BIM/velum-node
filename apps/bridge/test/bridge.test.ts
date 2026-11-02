@@ -42,7 +42,7 @@ function setup(opts: { enabled?: boolean; cfg?: (c: BridgeConfig) => void } = {}
 
 function redeem(user: ReturnType<typeof generateKeyPair>, velum: MockVelum, dst: "tron" | "polygon", to: string, amount: number): BridgeRedeemTx {
   const nonce = (velum.nonces.get(user.address) ?? 0) + velum.mempool.filter((t) => t.from === user.address).length;
-  const rest = { type: "bridge.redeem" as const, chain: velum.id, from: user.address, nonce, ts: Date.now(), dst, to, amount, fee: 0 };
+  const rest = { type: "bridge.redeem" as const, chain: velum.id, from: user.address, nonce, ts: Date.now(), dst, to, amount: BigInt(amount), fee: 0n };
   return { ...rest, sig: sign(user.secret, canonical(rest)) };
 }
 

@@ -8,10 +8,13 @@ export * from "./state";
 export * from "./wire";
 export * from "./client";
 
-/** Formatea µVEL como "12,345 VEL". */
-export function formatVel(micro: number, decimals = 3): string {
-  return (micro / 1_000_000).toLocaleString("es-ES", { minimumFractionDigits: 0, maximumFractionDigits: decimals }) + " VEL";
+import { formatUnits } from "./amount";
+/** Formatea velos (BigInt o texto decimal) como "12,345 VEL" (trunca a `decimals`). */
+export function formatVel(velos: bigint | string, decimals = 3, locale = "es-ES"): string {
+  return formatUnits(velos, { maxDecimals: decimals, locale, symbol: "VEL" });
 }
+export * from "./amount";
+export * from "./era";
 export * from "./proof";
 export * from "./tokens";
 export * from "./dex";
@@ -39,3 +42,7 @@ export * from "./snapshot";
 export * from "./slip10";
 export * from "./bridge";
 export * from "./staking";
+export * from "./payreq";
+export * from "./htlc";
+export * from "./quota";
+export * from "./phonepsi";

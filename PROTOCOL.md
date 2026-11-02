@@ -6,20 +6,39 @@
 > **vectores de prueba** de `spec/vectors/*.json`: una implementación es compatible si los reproduce byte a byte.
 >
 > Regenerar vectores: `bun spec/generate.ts` (formato, claves, sobres, trozos, buzones, recibos, sorteo, reclamaciones,
-> transacciones y bloques) y `bun packages/core/scripts/vectors.ts` (economía v3: comisiones, sello PoW, oráculo,
-> niveles, liquidación, alias). Con `--check`, comprueban que el núcleo los sigue reproduciendo byte a byte.
+> transacciones y bloques) y `bun packages/core/scripts/vectors.ts` (economía v4: importes, oferta, comisiones, sello PoW,
+> oráculo, niveles, liquidación, alias), ambos con `VELUM_NETWORK=testnet`. Con `--check`, comprueban que el núcleo los
+> sigue reproduciendo byte a byte.
 
 ## 1. Codificación y primitivas
 
 | Elemento | Definición | Vector |
 |---|---|---|
-| JSON canónico | Objetos con claves ordenadas (orden de código UTF-16), sin espacios, sin claves `undefined`; arrays en orden; números como `JSON.stringify` | `canonical.json` |
+| JSON canónico | Objetos con claves ordenadas (orden de código UTF-16), sin espacios, sin claves `undefined`; arrays en orden; números como `JSON.stringify`; **importes como texto decimal** (ver «Importes») | `canonical.json` |
 | `hashHex(x)` | SHA-256 de los bytes UTF-8, en hex minúsculas | `canonical.json` |
 | `hashObj(o)` | `hashHex(canonical(o))` | `canonical.json` |
 | Raíz de Merkle | SHA-256 por pares de hojas hex concatenadas como texto; si el nivel es impar se duplica la última; lista vacía → 64 ceros | `merkle.json` |
 | Firmas | ed25519 (RFC 8032). `signObj(o)` firma `canonical(o sin "sig")` y añade `sig` hex | `signatures.json` |
 | Direcciones | `"vel" + base58(clave pública ed25519 de 32 B)` (alfabeto Bitcoin). Las cuentas especiales empiezan por `vel_` y no tienen clave | `keys.json` |
 | Base64 | Estándar con relleno (`=`) | — |
+
+### Importes (v4) — formato de red obligatorio
+
+- **VEL tiene 18 decimales.** La unidad mínima se llama **velo**: 1 VEL = 10^18 velos. Los demás tokens usan sus
+  propios decimales (`vUSDT`: 6). Todo importe es un entero en unidades mínimas.
+- **En JSON (transacciones, bloques, RPC, API, fotos de estado) un importe va SIEMPRE como texto decimal**: sin signo,
+  sin ceros a la izquierda, sin punto ni exponente, hasta 78 cifras (`^(0|[1-9][0-9]{0,77})$`). Ejemplo: 1,5 VEL =
+  `"1500000000000000000"`. El JSON canónico (lo que se firma y se hashea) escribe el mismo texto entre comillas.
+- **Un número JSON en un campo de importe hace la transacción inválida** («Importe no válido»). Así una tx v3 (µVEL)
+  nunca se confunde con una v4 (velos). Campos de importe por tipo: `transfer` amount, fee · `token.create` maxSupply,
+  initial, fee · `token.mint` amount, fee · `pool.fund` amount, fee · `order.place` amount · `node.bond`/`node.unbond`
+  amount · `bridge.mint` amount · `bridge.redeem` amount, fee · `stake.delegate`/`stake.undelegate` amount ·
+  `credits.buy` amount, fee (`TX_AMOUNT_FIELDS` en `tx.ts`).
+- Los **precios** (oráculo y órdenes) siguen siendo enteros JSON: unidades mínimas del token por 1 VEL.
+- Implementaciones: usad enteros de precisión arbitraria (BigInt, `big.Int`, `u128` no basta para productos). Productos
+  y repartos con suelo: `a × b / c`. Vector: `amounts.json`; oferta y migración: `supply.json`.
+- Mostrar a personas: `formatAmount` / `parseAmount` (`wallet.ts`, `amount.ts`): hasta 18 decimales, separadores del
+  idioma, truncando (nunca redondeando hacia arriba); `parseAmount` rechaza más decimales de los que admite el token.
 
 ## 2. Identidad y claves
 
@@ -81,7 +100,16 @@
   suplentes esperan ¼ de bloque por puesto. Cabecera con raíces Merkle de transacciones, recibos y señales de vida y
   `stateRoot = hashObj(estado de consenso)`. `applyBlock` reconstruye el bloque y exige el mismo hash.
   Vector: `chain.json` (génesis + 3 bloques).
-- Toda la economía usa enteros (µVEL = 10⁻⁶ VEL) y BigInt para productos; el estado se recorre con claves ordenadas.
+- Toda la economía usa enteros BigInt (velos = 10⁻¹⁸ VEL desde la v4) y el estado se recorre con claves ordenadas.
+- **Oferta v4**: tope 21.000.000.000 VEL; 100 M en génesis; R(e) = floor(R0 / 2^floor(e / HALVING_EPOCHS)) mientras
+  el exponente sea < 33 (después, 0); R0 = floor(20.900 M VEL / (2 × HALVING_EPOCHS)); mitad cada 4 años de épocas.
+  Lo acuñado nunca pasa del tope. **El VEL nunca se destruye**: no hay cuenta de quema ni campo `burned`.
+- Comisiones: 0 bajo el umbral (con sello PoW); desde el umbral, max(1, floor(velos / 10.000)); 80 % bolsa de nodos,
+  20 % Reserva de la Red (que devuelve 0,1 % de su saldo por época a la bolsa).
+- `credits.buy { amount, to?, fee }` (v4): convierte VEL en créditos de mensajería no transferibles para `to` (por
+  defecto `from`): créditos = floor(amount × precioUSDT / 10^18 / 22 µUSDT). Sin precio del oráculo no entra; mínimo
+  1 VEL; el VEL va entero a la bolsa de nodos de la época. El consumo de créditos se cuenta fuera de la cadena (puertas
+  y nodos). Cuentas y escenarios: `docs/economia-v4.md`.
 
 ## 7. Red
 
@@ -99,7 +127,7 @@ JSON sobre WebSocket. Roles: `node`, `client`, `watch`.
 - Métodos RPC: `chain.head`, `chain.block`, `chain.blocks`, `chain.epoch`, `account.get`, `account.balances`,
   `account.orders`, `account.history`, `tx.submit`, `faucet`, `shard.put`, `mailbox.open`, `receipt.submit`,
   `token.info`, `token.list`, `market.book`, `market.trades`, `supply`, `difficulty`, `node.info`, `node.get`,
-  `node.list`, `stats` (tipos en `wire.ts`).
+  `node.list`, `stats`, `credits.of` (tipos en `wire.ts`; importes en texto decimal).
 - Antispam del nodo de referencia: 50 `shard.put`/s por conexión (ráfaga 200), 2.000 trozos por buzón, tope global
   con desalojo de los que antes caducan, llamadas de 1 MB como máximo.
 
@@ -115,7 +143,13 @@ JSON sobre WebSocket. Roles: `node`, `client`, `watch`.
 
 Detalle y plan: `docs/mainnet.md`. Diferencias de consenso con la testnet:
 
-- Época de 1.800 bloques (≈ 1 h). `HALVING_EPOCHS = 17.520`, `R0 = 25.684,931506 VEL`. Constantes por época reescaladas.
+- Época de 1.800 bloques (≈ 1 h). Desde la v4: `HALVING_EPOCHS = 35.064` (4 años), `R0 = 298.026,465890942276979237 VEL`
+  (`298026465890942276979237` velos), 33 mitades (≈ 132 años). Antes de la v4 (v1): µVEL, tope 1.000 M, `R0 = 25.684,931506 VEL`.
+- **Actualización v4 en vivo** (`MAINNET_V4_HEIGHT`, `upgrades.ts`): los bloques anteriores se validan con las reglas v1/v3
+  congeladas (`packages/core/src/v3`, importes `number` en µVEL); en el bloque de activación, antes de sus tx, cada importe
+  VEL del estado se multiplica por 10^12 (µVEL → velos; los de otros tokens no cambian), se quita `supply.burned`
+  y aparecen `msgCredits`, `supply.creditsPaid` y `supply.credits`. Desde ahí, raíz con la codificación v4 y cabecera `pv: 4`.
+  Un nodo que reaplica desde génesis llega a las mismas raíces (`packages/core/scripts/replay-mainnet.ts`).
 - Génesis (`packages/core/genesis/mainnet.json`): 100 M VEL a la cartera fría; token `vUSDT` (6 decimales, suministro 0, emisor = autoridad de la pasarela). Sin grifo ni tokens de prueba.
 - Cabecera con `pv` (versión de protocolo). Tabla `UPGRADES` (`upgrades.ts`): versión por altura y migraciones puras en el bloque de activación. Un bloque con `pv` desconocido se rechaza con «Actualización necesaria».
 - Oráculo: solo `VEL/vUSDT`. Umbral de comisión `FEE_FREE_USDT = 1.100 vUSDT`. El euro no entra en consenso.

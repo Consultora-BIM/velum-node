@@ -111,8 +111,8 @@ group("claims", "Reclamaciones de trabajo v3: hoja {r, role} → sha512(canónic
 group("transactions", "Transacciones firmadas con la clave de cartera (ed25519 sobre JSON canónico sin 'sig'). txId = sha256(canónico)[0..48].", () => {
   const f = V.faucetKeyPair(), a = V.keyPairFromText("vector-alice");
   const txs: V.Tx[] = [
-    V.makeTransfer(f.secret, f.address, a.address, 5 * V.UNIT, 0, { ts: T0, memo: "hola" }),
-    V.makeTransfer(f.secret, f.address, a.address, 7 * V.UNIT, 1, { ts: T0, token: "tEUR" }),
+    V.makeTransfer(f.secret, f.address, a.address, 5n * V.UNIT, 0, { ts: T0, memo: "hola" }),
+    V.makeTransfer(f.secret, f.address, a.address, 7n * 1_000_000n, 1, { ts: T0, token: "tEUR" }),
     V.makeRegister(a.secret, a.address, 0, { name: "nodo-vector", version: "2.0.0", kind: "light", ts: T0 }),
   ];
   return txs.map((tx) => ({ tx, txId: V.txId(tx), checkTx: V.checkTx(tx) }));
@@ -122,7 +122,7 @@ group("chain", "Génesis y 3 bloques aplicados con applyBlock: hashes de cabecer
   let s = V.genesisState();
   const cases: unknown[] = [{ height: 0, hash: s.hash, stateRoot: V.stateRoot(s) }];
   const inputs: V.Tx[][] = [
-    [V.makeRegister(p.secret, p.address, 0, { name: "productor", version: "2.0.0", ts: T0 }), V.makeTransfer(f.secret, f.address, a.address, 10 * V.UNIT, 0, { ts: T0 })],
+    [V.makeRegister(p.secret, p.address, 0, { name: "productor", version: "2.0.0", ts: T0 }), V.makeTransfer(f.secret, f.address, a.address, 10n * V.UNIT, 0, { ts: T0 })],
     [],
     [V.makeTransfer(a.secret, a.address, p.address, V.UNIT, 0, { ts: T0 })],
   ];

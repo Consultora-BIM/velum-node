@@ -15,7 +15,10 @@ const MAIN = resolve(import.meta.dir, "../src/main.ts");
 const ROOT = mkdtempSync(join(tmpdir(), "velum-e2e-"));
 const PORTS = [7431, 7432, 7433];
 const url = (p: number) => `ws://localhost:${p}/ws`;
-const EUR = 1_000_000;
+const EUR = 1_000_000; // precio: µtEUR por VEL (number)
+const EURt = 1_000_000n; // 1 tEUR en unidades mínimas (BigInt)
+/** Importes de la RPC (texto decimal) → BigInt. */
+const big = (o: Record<string, unknown>) => Object.fromEntries(Object.entries(o ?? {}).map(([k, v]) => [k, BigInt(String(v))])) as Record<string, bigint>;
 
 type Proc = ReturnType<typeof Bun.spawn>;
 const procs: (Proc | null)[] = [null, null, null];
@@ -111,7 +114,7 @@ function accountFromPhrase(name: string, devices = 1): V.VelumAccount[] {
 const faucet = V.faucetKeyPair();
 async function submit(tx: V.Tx) { return m0().rpc("tx.submit", { tx }); }
 async function nonceOf(addr: string) { const a = await m0().rpc("account.get", { address: addr }); return a.nonce + a.pending; }
-async function bal(addr: string) { return (await m0().rpc("account.balances", { address: addr })) as Record<string, number>; }
+async function bal(addr: string) { return big(await m0().rpc("account.balances", { address: addr })); }
 async function waitTxs(addrs: string[]) {
   await waitFor("transacciones en bloque", async () => (await Promise.all(addrs.map((a) => m0().rpc("account.get", { address: a })))).every((a) => a.pending === 0), 30_000, 300);
 }
@@ -172,37 +175,37 @@ async function run() {
     const r = await cb1.faucet();
     await waitTxs([faucet.address]);
     const b = await bal(B);
-    if (b.VEL !== r.amount || b.tEUR !== 100 * EUR) throw new Error(JSON.stringify(b));
-    return `bob: ${V.formatAmount("VEL", b.VEL!)} y ${b.tEUR! / EUR} tEUR`;
+    if (b.VEL !== BigInt(r.amount) || b.tEUR !== 100n * EURt) throw new Error(JSON.stringify(b));
+    return `bob: ${V.formatAmount("VEL", b.VEL!)} y ${V.formatAmount("tEUR", b.tEUR!)}`;
   });
 
   await check("pago: comisión según el precio (0 bajo 1.000 € con sello PoW), sin quemar nada", async () => {
     // alice recibe fondos de la cuenta del grifo (clave pública de testnet) para crear su token.
-    await submit(V.makeTransfer(faucet.secret, faucet.address, A, 400 * V.UNIT, await nonceOf(faucet.address), { ctx: await m0().rpc("chain.fees", {}) }));
+    await submit(V.makeTransfer(faucet.secret, faucet.address, A, 400n * V.UNIT, await nonceOf(faucet.address), { ctx: await m0().rpc("chain.fees", {}) }));
     await waitTxs([faucet.address]);
     const before = await m0().rpc("supply", {});
     const a0 = (await bal(A)).VEL!;
-    const p = await ca.pay(C, 1 * V.UNIT, { memo: "e2e" });
+    const p = await ca.pay(C, 1n * V.UNIT, { memo: "e2e" });
     await waitTxs([A]);
-    const fee = (p.tx as V.TransferTx).fee;
+    const fee = BigInt((p.tx as V.TransferTx).fee);
     const a1 = (await bal(A)).VEL!;
     if (a1 !== a0 - V.UNIT - fee) throw new Error(`alice ${a1}, esperado ${a0 - V.UNIT - fee}`);
     if ((await bal(C)).VEL !== V.UNIT) throw new Error("carol no recibe");
     const after = await m0().rpc("supply", {});
-    if ((after.burned ?? 0) !== (before.burned ?? 0)) throw new Error("se quemó VEL");
-    if (after.minted < before.minted) throw new Error("bajó lo acuñado");
-    return `tx ${p.id.slice(0, 10)}… · comisión ${fee} µVEL${fee === 0 ? ` (sello PoW de ${V.powBits(p.tx as any)} bits)` : ""} · nada quemado`;
+    if ("burned" in after) throw new Error("v4 no tiene quema");
+    if (BigInt(after.minted) < BigInt(before.minted)) throw new Error("bajó lo acuñado");
+    return `tx ${p.id.slice(0, 10)}… · comisión ${fee} velos${fee === 0n ? ` (sello PoW de ${V.powBits(p.tx as any)} bits)` : ""} · nada quemado`;
   });
 
   await check("tokens: crear, emitir y transferir (comisión en VEL)", async () => {
     let n = await nonceOf(A);
-    await submit(V.makeTokenCreate(alice!.wallet.secret, A, n++, { symbol: "ALIZ", name: "Token de Alice", decimals: 2, maxSupply: 1_000_000, initial: 10_000, mintable: true }));
-    await submit(V.makeTokenMint(alice!.wallet.secret, A, n++, "ALIZ", A, 5_000));
-    await submit(V.makeTransfer(alice!.wallet.secret, A, B, 250, n++, { token: "ALIZ" }));
+    await submit(V.makeTokenCreate(alice!.wallet.secret, A, n++, { symbol: "ALIZ", name: "Token de Alice", decimals: 2, maxSupply: 1_000_000n, initial: 10_000n, mintable: true }));
+    await submit(V.makeTokenMint(alice!.wallet.secret, A, n++, "ALIZ", A, 5_000n));
+    await submit(V.makeTransfer(alice!.wallet.secret, A, B, 250n, n++, { token: "ALIZ" }));
     await waitTxs([A]);
     const info = await m0().rpc("token.info", { symbol: "ALIZ" });
     const a = await bal(A), b = await bal(B);
-    if (info?.supply !== 15_000 || a.ALIZ !== 14_750 || b.ALIZ !== 250) throw new Error(`${JSON.stringify(info)} ${a.ALIZ} ${b.ALIZ}`);
+    if (BigInt(info?.supply ?? -1) !== 15_000n || a.ALIZ !== 14_750n || b.ALIZ !== 250n) throw new Error(`${JSON.stringify(info)} ${a.ALIZ} ${b.ALIZ}`);
     const list = (await m0().rpc("token.list", {})) as any[];
     return `ALIZ: emitidos ${info.supply} · tokens en la red: ${list.map((t) => t.symbol).join(", ")}`;
   });
@@ -210,7 +213,7 @@ async function run() {
   await check("mercado VEL/tEUR: alice vende, bob compra; saldos y comisión del taker", async () => {
     const s0 = await m0().rpc("supply", {});
     const a0 = await bal(A), b0 = await bal(B);
-    const price = 2 * EUR, amount = 10 * V.UNIT;
+    const price = 2 * EUR, amount = 10n * V.UNIT;
     await submit(V.makeOrder(alice!.wallet.secret, A, await nonceOf(A), { pair: "VEL/tEUR", side: "sell", price, amount }));
     await waitTxs([A]);
     const book = await m0().rpc("market.book", { pair: "VEL/tEUR" });
@@ -218,17 +221,17 @@ async function run() {
     await cb1.placeOrder({ pair: "VEL/tEUR", side: "buy", price, amount });
     await waitTxs([B]);
     const a1 = await bal(A), b1 = await bal(B), s1 = await m0().rpc("supply", {});
-    const quote = 20 * EUR;
+    const quote = 20n * EURt;
     if (a1.VEL !== a0.VEL! - amount) throw new Error(`alice VEL ${a1.VEL} vs ${a0.VEL! - amount}`);
-    if ((a1.tEUR ?? 0) !== (a0.tEUR ?? 0) + quote) throw new Error(`alice tEUR ${a1.tEUR}`);
+    if ((a1.tEUR ?? 0n) !== (a0.tEUR ?? 0n) + quote) throw new Error(`alice tEUR ${a1.tEUR}`);
     // Comisión del taker (bob): 1 pb del VEL ejecutado si vale ≥ 1.000 €; si no, 0.
     const fee = b0.VEL! + amount - b1.VEL!;
-    if (fee < 0 || fee > Math.ceil(amount / 10_000)) throw new Error(`bob pagó ${fee} µVEL de comisión`);
+    if (fee < 0n || fee > amount / 10_000n + 1n) throw new Error(`bob pagó ${fee} velos de comisión`);
     if (b1.tEUR !== b0.tEUR! - quote) throw new Error(`bob tEUR ${b1.tEUR}`);
-    if ((s1.burned ?? 0) !== (s0.burned ?? 0)) throw new Error("se quemó VEL");
+    if ("burned" in s1 || BigInt(s1.minted) < BigInt(s0.minted)) throw new Error("v4 no tiene quema");
     const trades = await m0().rpc("market.trades", { pair: "VEL/tEUR" });
     const last = (await m0().rpc("market.book", { pair: "VEL/tEUR" })).last;
-    return `1 operación (${trades.length} en el registro) · último precio ${last / EUR} tEUR · comisión del taker ${fee} µVEL · nada quemado`;
+    return `1 operación (${trades.length} en el registro) · último precio ${last / EUR} tEUR · comisión del taker ${fee} velos · nada quemado`;
   });
 
   // ---------------------------------------------------------------- sorteo y mensajes
@@ -303,31 +306,31 @@ async function run() {
   });
 
   await check("bolsa de token (pool.fund): alice reparte ALIZ entre los nodos durante 2 épocas", async () => {
-    await submit(V.makePoolFund(alice!.wallet.secret, A, await nonceOf(A), "ALIZ", 2_000, 2));
+    await submit(V.makePoolFund(alice!.wallet.secret, A, await nonceOf(A), "ALIZ", 2_000n, 2));
     await waitTxs([A]);
     const nodes = (await m0().rpc("node.list", {})) as any[];
     const paid = await waitFor("reparto de la bolsa", async () => {
       const bs = await Promise.all(nodes.map((n) => bal(n.payout)));
-      const total = bs.reduce((a, b) => a + (b.ALIZ ?? 0), 0);
+      const total = bs.reduce((a, b) => a + (b.ALIZ ?? 0n), 0n);
       const escrow = await bal(V.ESCROW_ADDRESS);
-      return total > 0 && !(escrow.ALIZ > 0) ? { bs, total } : null;
+      return total > 0n && !((escrow.ALIZ ?? 0n) > 0n) ? { bs, total } : null;
     }, 200_000, 2_000);
-    const lightGot = paid.bs[nodes.findIndex((n) => n.address === lightKeys.address)]?.ALIZ ?? 0;
+    const lightGot = paid.bs[nodes.findIndex((n) => n.address === lightKeys.address)]?.ALIZ ?? 0n;
     return `repartidos ${paid.total} de 2000 ALIZ · ligero ${lightGot} · resto vuelve a alice`;
   });
 
   await check("recompensas: emisión R0 por época cerrada (sin quema); el ligero cobra por su trabajo verificado", async () => {
     const sup = await m0().rpc("supply", {});
     const closed = sup.epoch; // épocas 0..epoch-1 cerradas
-    const diff = sup.minted - V.GENESIS_FAUCET_SUPPLY;
-    if (diff !== V.R0 * closed) throw new Error(`acuñado ${diff}, esperado ${V.R0 * closed} (${closed} épocas)`);
-    if ((sup.burned ?? 0) !== 0) throw new Error("v3 no quema VEL");
+    const diff = BigInt(sup.minted) - V.GENESIS_FAUCET_SUPPLY;
+    if (diff !== V.R0 * BigInt(closed)) throw new Error(`acuñado ${diff}, esperado ${V.R0 * BigInt(closed)} (${closed} épocas)`);
+    if ("burned" in sup) throw new Error("v4 no tiene quema");
     const lightInfo = await waitFor("cobro del ligero", async () => {
       const x = await m0().rpc("node.get", { address: lightKeys.address });
-      return x?.earned > 0 ? x : null;
+      return BigInt(x?.earned ?? 0) > 0n ? x : null;
     }, 200_000, 3_000);
     const dif = await m0().rpc("difficulty", {});
-    return `${closed} épocas × R0 = ${V.formatAmount("VEL", diff, 6, 3)} · ligero ganó ${V.formatAmount("VEL", lightInfo.earned, 6, 3)} · dificultad ${dif.value}`;
+    return `${closed} épocas × R0 = ${V.formatAmount("VEL", diff, 18, 3)} · ligero ganó ${V.formatAmount("VEL", lightInfo.earned, 18, 3)} · dificultad ${dif.value}`;
   });
 
   if (chatter) clearInterval(chatter);

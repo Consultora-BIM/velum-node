@@ -1,15 +1,18 @@
-// Máquina de estados de la cadena v3. Determinista: todos los nodos (y el indexador del explorador)
+// Máquina de estados de la cadena (v4: importes BigInt de 18 decimales; docs/economia-v4.md). Determinista: todos los nodos (y el indexador del explorador)
 // llegan al mismo resultado. Reglas: sin reloj (solo la hora del bloque), sin azar, solo enteros
 // (productos grandes con BigInt) y orden de recorrido estable (claves ordenadas).
 //
 // v3 (docs/protocolo-v3.md + «Notas de implementación»): sin quema (80 % bolsa · 20 % Reserva), comisión 0 bajo
 // 1.000 € con sello PoW, niveles por antigüedad continua (×0,50…×1,00), fianza opcional, reclamaciones de
 // trabajo con muestreo (los recibos ya no van en los bloques), oráculo EUR/USD/USDT y alias.
+// v4: todo importe es BigInt (velos: 1 VEL = 10^18); tope 21.000 M VEL, mitad cada 4 años, créditos de mensajería.
+// Los bloques de mainnet anteriores a la altura de la v4 se aplican con el código v3 congelado (era.ts → v3/).
 import { hashHex, hashObj } from "./bytes";
+import { amountOrNull, minBig } from "./amount";
 import {
   ATTESTATION_MODE, BLOCK_MS, BOND_CAP, BOND_UNBOND_EPOCHS, BP, CHAIN_ID, CLAIM_CAP_DEN, CLAIM_CAP_NUM, CLAIM_LEAF_MAX_AGE,
   CLAIM_SAMPLE_LAG, CLAIM_SETTLE_LAG, DIFFICULTY_HISTORY, EPOCH_BLOCKS, ESCROW_ADDRESS, FEE_BP, FEE_FREE_EUR, FEE_SPLIT_BP,
-  GENESIS_RESERVE_SUPPLY, HALVING_EPOCHS, IS_MAINNET, FEE_FREE_USDT, LOTTERY_KEEP_EPOCHS, LOTTERY_PRESENCE_BLOCKS, MAX_SUPPLY, MAX_UNBONDING,
+  CREDIT_PRICE_USDT, GENESIS_RESERVE_SUPPLY, HALVING_EPOCHS, MAX_HALVINGS, IS_MAINNET, FEE_FREE_USDT, LOTTERY_KEEP_EPOCHS, LOTTERY_PRESENCE_BLOCKS, MAX_SUPPLY, MAX_UNBONDING,
   MONTH_EPOCHS, NAME_POW_EXTRA_BITS, NAME_TERM_EPOCHS, POW_MAX_BITS, POW_MIN_BITS, POW_TARGET_PER_EPOCH, PRESENCE_WINDOW,
   PRODUCER_SHARE_BP, R0, RECEIPT_MEMORY_EPOCHS, RECEIPT_WINDOW_MS, RESERVE_ADDRESS, RESERVE_RELEASE_BP, STREAK_GAP_EPOCHS,
   TIERS, UNIT, VEL, pillarMonths, type AttestationMode, type NodeKind, type Region,
@@ -17,11 +20,13 @@ import {
 import { faucetKeyPair, verifyObj, verify } from "./keys";
 import {
   type Block, type BlockHeader, type Presence, type ReceiptV2, type Reward, type TokenReward, type Tx,
-  blockRoots, checkTx, headerHash, verifyReceipt,
+  blockRoots, checkTx, headerHash, normalizeTx, verifyReceipt,
 } from "./tx";
+import { V4, isV4At, legacyApplyBlock, legacyApplyTx, legacyBuildBlock, legacyGenesis, legacyStateRoot } from "./era";
 import { type TokenInfo, applyTokenCreate, applyTokenMint, bridgeToken, genesisTokens } from "./tokens";
 import { genesisTime, mainnetGenesis } from "./genesis";
 import { applyUpgrades, protocolAt, latestProtocol } from "./upgrades";
+import { HTLC_ADDRESS, HTLC_MAX_EPOCHS, HTLC_MAX_OPEN, HTLC_PROTOCOL, htlcHash, htlcIdOf, type HtlcRecord } from "./htlc";
 import { type BridgeState, applyBridgeMint, applyBridgeRedeem } from "./bridge";
 import { type StakeState, applyCommission, applyDelegate, applyUndelegate, payNode, releaseUndelegations } from "./staking";
 import { type DexState, applyOrderCancel, applyOrderPlace, emptyDex, expireOrders } from "./dex";
@@ -33,9 +38,9 @@ import { claimSamples, leafHash, proofIndices, verifyWorkPath } from "./claims";
 import { decodeCard } from "./names";
 
 /** `balance` es el saldo en VEL (espejo de `balances[addr].VEL`, se mantiene por compatibilidad v1). */
-export interface Account { balance: number; nonce: number }
+export interface Account { balance: bigint; nonce: number }
 
-export interface Unbonding { amount: number; /** Época al final de la cual vuelve al nodo. */ release: number }
+export interface Unbonding { amount: bigint; /** Época al final de la cual vuelve al nodo. */ release: number }
 
 export interface NodeInfo {
   address: string;
@@ -57,16 +62,16 @@ export interface NodeInfo {
   shardsDelivered: number;
   credits: number;
   blocksProduced: number;
-  earned: number; // µVEL acumulados
+  earned: bigint; // velos acumulados
   tier: string;
-  /** Fianza bloqueada (µVEL, en vel_escrow) y desbloqueos en espera. */
-  bond: number;
+  /** Fianza bloqueada (velos, en vel_escrow) y desbloqueos en espera. */
+  bond: bigint;
   unbonding: Unbonding[];
   /** Reclamaciones probadas y nulas (historial para el explorador). */
   claimsOk: number;
   claimsVoid: number;
   /** Staking delegado (opcionales: ausentes = 0 / comisión por defecto). */
-  delegated?: number;
+  delegated?: bigint;
   commissionBp?: number;
   commissionEpoch?: number;
 }
@@ -76,11 +81,11 @@ export interface TokenPool {
   id: string;
   token: string;
   funder: string;
-  total: number;
-  remaining: number;
+  total: bigint;
+  remaining: bigint;
   epochsLeft: number;
   createdHeight: number;
-  paid: number;
+  paid: bigint;
 }
 
 /** Dispositivo atestado (§11). Solo huellas: nada que identifique a la persona. */
@@ -104,8 +109,8 @@ export interface DifficultyPoint {
   epoch: number;
   /** Créditos de trabajo verificados de la época. */
   credits: number;
-  /** Emisión nominal R(e) en µVEL. */
-  emission: number;
+  /** Emisión nominal R(e) en velos. */
+  emission: bigint;
   /** Créditos por 1 VEL, ×1000 (entero). null si R(e) = 0. */
   difficulty: number | null;
 }
@@ -149,21 +154,24 @@ export interface ChainState {
   ts: number;
   accounts: Record<string, Account>;
   /** Saldos por token: balances[dirección][símbolo]. Incluye VEL. Las entradas a 0 se borran. */
-  balances: Record<string, Record<string, number>>;
+  balances: Record<string, Record<string, bigint>>;
   tokens: Record<string, TokenInfo>;
   nodes: Record<string, NodeInfo>;
   devices: Record<string, DeviceRecord>;
   pools: Record<string, TokenPool>;
   dex: DexState;
-  /** `burned` queda a 0 en v3 (no se destruye VEL). `reserveIn/Out`: entradas y liberaciones de la Reserva. */
-  supply: { minted: number; burned: number; feesCollected: number; transfers: number; shards: number; reserveIn: number; reserveOut: number };
+  /**
+   * Oferta (velos). El VEL nunca se destruye: acuñado = en circulación. `reserveIn/Out`: entradas y liberaciones de la
+   * Reserva. `creditsPaid`: VEL pagado por créditos de mensajería (fue a la bolsa de nodos); `credits`: créditos emitidos.
+   */
+  supply: { minted: bigint; feesCollected: bigint; transfers: number; shards: number; reserveIn: bigint; reserveOut: bigint; creditsPaid: bigint; credits: number };
   epoch: {
-    pool: number; // µVEL esperando reparto (comisiones + restos)
+    pool: bigint; // velos esperando reparto (comisiones, créditos, restos)
     produced: Record<string, number>; // bloques producidos en la época
     present: Record<string, true>;
   };
   /** Bolsas de trabajo por época (85 %), pendientes de liquidar cuando se cierren sus pruebas. */
-  workPots: Record<string, number>;
+  workPots: Record<string, bigint>;
   /** Reclamaciones por época y nodo. */
   claims: Record<string, Record<string, WorkClaim>>;
   stats: {
@@ -192,6 +200,10 @@ export interface ChainState {
   bridge?: BridgeState;
   /** Staking delegado (ausente hasta la primera delegación). */
   stake?: StakeState;
+  /** Créditos de mensajería por dirección (v4, `credits.buy`): total comprado. No transferibles. El consumo se cuenta fuera de la cadena. */
+  msgCredits: Record<string, number>;
+  /** Candados hash-tiempo abiertos (htlc.ts). Ausente hasta el primero: la raíz no cambia mientras no se usen. */
+  htlcs?: Record<string, HtlcRecord>;
 }
 
 export const epochOf = (height: number) => Math.floor(height / EPOCH_BLOCKS);
@@ -201,39 +213,39 @@ export const epochOf = (height: number) => Math.floor(height / EPOCH_BLOCKS);
  */
 export const curEpoch = (s: { height: number }) => Math.max(0, epochOf(s.height - 1));
 
-/** R(e) = floor(R0 / 2^floor(e / HALVING)). Llega a 0 tras 29 mitades (~58 años). */
-export function emissionFor(epoch: number): number {
+/** R(e) = floor(R0 / 2^floor(e / HALVING)) en velos. 0 a partir de la mitad 33 (≈ 132 años). */
+export function emissionFor(epoch: number): bigint {
   const k = Math.floor(Math.max(0, epoch) / HALVING_EPOCHS);
-  if (k >= 52) return 0;
-  return Math.floor(R0 / 2 ** k);
+  if (k >= MAX_HALVINGS) return 0n;
+  return R0 >> BigInt(k);
 }
 
-/** a × b / c con enteros grandes (suelo). */
-export const mulDiv = (a: number, b: number, c: number): number => Number((BigInt(a) * BigInt(b)) / BigInt(c));
+/** a × b / c con suelo (BigInt). `b` y `c` pueden ser `number` enteros (puntos básicos, recuentos). */
+export const mulDiv = (a: bigint, b: bigint | number, c: bigint | number): bigint => (a * BigInt(b)) / BigInt(c);
 
 // ---------- Saldos ----------
-export const balanceOf = (s: ChainState, addr: string, token: string = VEL): number => s.balances[addr]?.[token] ?? 0;
+export const balanceOf = (s: ChainState, addr: string, token: string = VEL): bigint => s.balances[addr]?.[token] ?? 0n;
 
-const acct = (s: ChainState, a: string) => (s.accounts[a] ??= { balance: 0, nonce: 0 });
+const acct = (s: ChainState, a: string) => (s.accounts[a] ??= { balance: 0n, nonce: 0 });
 
-function setBalance(s: ChainState, addr: string, token: string, v: number) {
-  if (!Number.isSafeInteger(v) || v < 0) throw new Error(`Saldo imposible ${addr} ${token} ${v}`);
+function setBalance(s: ChainState, addr: string, token: string, v: bigint) {
+  if (typeof v !== "bigint" || v < 0n) throw new Error(`Saldo imposible ${addr} ${token} ${v}`);
   const m = (s.balances[addr] ??= {});
-  if (v === 0) delete m[token];
+  if (v === 0n) delete m[token];
   else m[token] = v;
   if (Object.keys(m).length === 0) delete s.balances[addr];
   if (token === VEL) acct(s, addr).balance = v;
 }
 
 /** Suma a un saldo (uso interno de la máquina de estados). */
-export function credit(s: ChainState, addr: string, token: string, amount: number) {
-  if (amount === 0) return;
+export function credit(s: ChainState, addr: string, token: string, amount: bigint) {
+  if (amount === 0n) return;
   setBalance(s, addr, token, balanceOf(s, addr, token) + amount);
 }
 
 /** Resta de un saldo. Lanza si no hay suficiente: quien llama lo comprueba antes (las tx son atómicas). */
-export function debit(s: ChainState, addr: string, token: string, amount: number) {
-  if (amount === 0) return;
+export function debit(s: ChainState, addr: string, token: string, amount: bigint) {
+  if (amount === 0n) return;
   const b = balanceOf(s, addr, token);
   if (b < amount) throw new Error(`Saldo insuficiente ${addr} ${token}`);
   setBalance(s, addr, token, b - amount);
@@ -241,14 +253,14 @@ export function debit(s: ChainState, addr: string, token: string, amount: number
 
 // ---------- Comisiones (v3 §5) ----------
 /** Reparto de una comisión: 80 % bolsa de nodos · 20 % Reserva de la Red. Nada se quema. */
-export function splitFee(fee: number) {
-  const pool = Math.floor((fee * FEE_SPLIT_BP.pool) / BP);
+export function splitFee(fee: bigint) {
+  const pool = mulDiv(fee, FEE_SPLIT_BP.pool, BP);
   return { pool, reserve: fee - pool };
 }
 
 /** Cobra una comisión en VEL a `payer` y la reparte (80/20). */
-export function chargeFee(s: ChainState, payer: string, fee: number) {
-  if (fee <= 0) return;
+export function chargeFee(s: ChainState, payer: string, fee: bigint) {
+  if (fee <= 0n) return;
   debit(s, payer, VEL, fee);
   const p = splitFee(fee);
   credit(s, RESERVE_ADDRESS, VEL, p.reserve);
@@ -258,52 +270,65 @@ export function chargeFee(s: ChainState, payer: string, fee: number) {
 }
 
 /** Cobra un importe que va entero a la Reserva (crear token). */
-export function chargeToReserve(s: ChainState, payer: string, amount: number) {
-  if (amount <= 0) return;
+export function chargeToReserve(s: ChainState, payer: string, amount: bigint) {
+  if (amount <= 0n) return;
   debit(s, payer, VEL, amount);
   credit(s, RESERVE_ADDRESS, VEL, amount);
   s.supply.reserveIn += amount;
   s.supply.feesCollected += amount;
 }
 
+/** 1 pb del importe en velos, mínimo 1 velo. */
+const bpFee = (vel: bigint) => { const f = mulDiv(vel, FEE_BP, BP); return f > 0n ? f : 1n; };
+
 /**
- * Comisión por mover `vel` µVEL: 1 pb (mín. 1 µVEL) si supera el umbral según el oráculo; si no (o sin precio), 0.
+ * Comisión por mover `vel` velos: 1 pb (mín. 1 velo) si supera el umbral según el oráculo; si no (o sin precio), 0.
  * Umbral: testnet 1.000 € (EUR del oráculo); mainnet 1.100 USDT (FEE_FREE_USDT, sin euros en consenso).
  */
-export function feeForVel(prices: PriceView | null, vel: number): number {
-  if (vel <= 0) return 0;
+export function feeForVel(prices: PriceView | null, vel: bigint): bigint {
+  if (vel <= 0n) return 0n;
   if (IS_MAINNET) {
-    if (!prices?.usdt) return 0;
-    return mulDiv(vel, prices.usdt, UNIT) >= FEE_FREE_USDT ? Math.max(1, Math.floor((vel * FEE_BP) / BP)) : 0;
+    if (!prices?.usdt) return 0n;
+    return mulDiv(vel, prices.usdt, UNIT) >= FEE_FREE_USDT ? bpFee(vel) : 0n;
   }
-  if (!prices?.eur) return 0;
-  const eur = mulDiv(vel, prices.eur, UNIT);
-  return eur >= FEE_FREE_EUR ? Math.max(1, Math.floor((vel * FEE_BP) / BP)) : 0;
+  if (!prices?.eur) return 0n;
+  return mulDiv(vel, prices.eur, UNIT) >= FEE_FREE_EUR ? bpFee(vel) : 0n;
 }
 
 /** Comisión mínima de un pago de `amount` unidades de `token` (0 bajo 1.000 € o sin precio). */
-export function transferFee(prices: PriceView | null, token: string, amount: number): number {
+export function transferFee(prices: PriceView | null, token: string, amount: bigint): bigint {
   const v = valueOf(prices, token, amount);
   if (IS_MAINNET) {
-    if (v.vel === null || v.usdt === null) return 0;
-    return v.usdt >= FEE_FREE_USDT ? Math.max(1, Math.floor((v.vel * FEE_BP) / BP)) : 0;
+    if (v.vel === null || v.usdt === null) return 0n;
+    return v.usdt >= FEE_FREE_USDT ? bpFee(v.vel) : 0n;
   }
-  if (v.vel === null || v.eur === null) return 0;
-  return v.eur >= FEE_FREE_EUR ? Math.max(1, Math.floor((v.vel * FEE_BP) / BP)) : 0;
+  if (v.vel === null || v.eur === null) return 0n;
+  return v.eur >= FEE_FREE_EUR ? bpFee(v.vel) : 0n;
 }
 
-/** Comisión mínima exigida a una tx con el oráculo actual. */
-export function requiredFee(s: Pick<ChainState, "oracle">, tx: Tx): number {
-  if (tx.type === "transfer") return transferFee(s.oracle, tx.token ?? VEL, tx.amount);
-  if (tx.type === "token.create") return tx.fee;
-  return 0;
+/** Comisión mínima exigida a una tx con el oráculo actual (acepta importes en BigInt o en texto). */
+export function requiredFee(s: Pick<ChainState, "oracle">, tx: Tx): bigint {
+  if (tx.type === "transfer") return transferFee(s.oracle, tx.token ?? VEL, amountOrNull(tx.amount) ?? 0n);
+  if (tx.type === "credits.buy") return feeForVel(s.oracle, amountOrNull(tx.amount) ?? 0n);
+  if (tx.type === "token.create") return amountOrNull(tx.fee) ?? 0n;
+  return 0n;
+}
+
+/** Créditos que compra `vel` velos al precio del oráculo (0 sin precio). */
+export function creditsFor(prices: PriceView | null, vel: bigint): number {
+  const usdt = IS_MAINNET ? prices?.usdt : prices?.usdt ?? prices?.usd;
+  if (!usdt || vel <= 0n) return 0;
+  const c = mulDiv(vel, usdt, UNIT) / CREDIT_PRICE_USDT;
+  return c > BigInt(Number.MAX_SAFE_INTEGER) ? Number.MAX_SAFE_INTEGER : Number(c);
 }
 
 /** Bits de sello exigidos a una tx (0 = no hace falta). */
 export function powRequired(s: Pick<ChainState, "pow">, tx: Tx): number {
   const base = Math.min(s.pow.bits, s.pow.prev);
+  const feeZero = amountOrNull((tx as { fee?: unknown }).fee) === 0n;
   switch (tx.type) {
-    case "transfer": case "token.mint": case "pool.fund": return tx.fee === 0 ? base : 0;
+    case "transfer": case "token.mint": case "pool.fund": case "credits.buy": return feeZero ? base : 0;
+    case "htlc.lock": case "htlc.claim": case "htlc.refund": return base;
     case "order.place": case "order.cancel": case "name.release": return base;
     case "bridge.redeem": case "stake.delegate": case "stake.undelegate": case "node.commission": return base;
     case "name.register": case "name.renew": return base + NAME_POW_EXTRA_BITS;
@@ -315,6 +340,8 @@ export const nextId = (s: ChainState, prefix: string) => prefix + (s.seq++).toSt
 
 // ---------- Génesis ----------
 export function genesisState(): ChainState {
+  // Mainnet empezó en v3 (µVEL): su génesis es la v3 convertida a v4 (mismo hash). Testnet 4: v4 desde génesis.
+  if (!isV4At(0)) return legacyGenesis();
   // Mainnet: 100 M VEL a la cartera fría y vUSDT con la pasarela como única emisora. Sin grifo ni tokens de prueba.
   // Testnet: 100 M VEL + tEUR/tUSD/tUSDT al grifo.
   const g = IS_MAINNET ? mainnetGenesis() : null;
@@ -331,8 +358,8 @@ export function genesisState(): ChainState {
     devices: {},
     pools: {},
     dex: emptyDex(),
-    supply: { minted: GENESIS_RESERVE_SUPPLY, burned: 0, feesCollected: 0, transfers: 0, shards: 0, reserveIn: 0, reserveOut: 0 },
-    epoch: { pool: 0, produced: {}, present: {} },
+    supply: { minted: GENESIS_RESERVE_SUPPLY, feesCollected: 0n, transfers: 0, shards: 0, reserveIn: 0n, reserveOut: 0n, creditsPaid: 0n, credits: 0 },
+    epoch: { pool: 0n, produced: {}, present: {} },
     workPots: {},
     claims: {},
     stats: { difficulty: null, difficultyEpoch: -1, history: [] },
@@ -344,6 +371,7 @@ export function genesisState(): ChainState {
     names: {},
     nameOf: {},
     nameExpiry: {},
+    msgCredits: {},
   };
   credit(s, holder, VEL, GENESIS_RESERVE_SUPPLY);
   if (g) {
@@ -359,17 +387,30 @@ export function genesisState(): ChainState {
   return s;
 }
 
-/** Raíz del estado: todo lo que es consenso. */
+/**
+ * Raíz del estado: todo lo que es consenso. Importes como texto decimal (canonical).
+ * Antes de la altura de la v4 (mainnet) la raíz es la del estado v3 equivalente (era.ts).
+ */
 export function stateRoot(s: ChainState): string {
+  if (!isV4At(s.height)) return legacyStateRoot(s);
   return hashObj({
     accounts: s.accounts, balances: s.balances, tokens: s.tokens, nodes: s.nodes, devices: s.devices, pools: s.pools,
     dex: s.dex, supply: s.supply, epoch: s.epoch, workPots: s.workPots, claims: s.claims, stats: s.stats, seq: s.seq,
     epochNodes: s.epochNodes, seenReceipts: s.seenReceipts, oracle: s.oracle, pow: s.pow, names: s.names, nameOf: s.nameOf,
-    nameExpiry: s.nameExpiry, bridge: s.bridge, stake: s.stake,
+    nameExpiry: s.nameExpiry, bridge: s.bridge, stake: s.stake, msgCredits: s.msgCredits, htlcs: s.htlcs, v: V4,
   });
 }
 
-export const cloneState = (s: ChainState): ChainState => JSON.parse(JSON.stringify(s));
+/** Copia profunda (admite BigInt; JSON.parse(JSON.stringify()) los convertiría en texto). */
+export function deepClone<T>(x: T): T {
+  if (x === null || typeof x !== "object") return x;
+  if (Array.isArray(x)) return x.map(deepClone) as T;
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(x as object)) { const v = (x as any)[k]; if (v !== undefined) out[k] = deepClone(v); }
+  return out as T;
+}
+
+export const cloneState = (s: ChainState): ChainState => deepClone(s);
 
 const sortedKeys = (o: Record<string, unknown>) => Object.keys(o).sort();
 
@@ -406,12 +447,12 @@ export function tierFor(n: Pick<NodeInfo, "lastPresentEpoch" | "streakStart" | "
 }
 
 /** Factor de fianza (pb): 10.000 + min(fianza, 10.000 VEL) × 10.000 / 10.000 VEL → ×1 … ×2. */
-export const bondFactorBp = (bond: number) => BP + mulDiv(Math.min(Math.max(0, bond), BOND_CAP), BP, BOND_CAP);
+export const bondFactorBp = (bond: bigint) => BP + Number(mulDiv(minBig(bond > 0n ? bond : 0n, BOND_CAP), BP, BOND_CAP));
 
 /** Peso en el sorteo: tipo (2 completo / 1 ligero) × floor(nivel × fianza / 10⁶). Completo nuevo sin fianza = 100. */
 export function nodeWeight(n: NodeInfo, ep: number): number {
   // La delegación suma a la fianza propia, con el mismo tope (BOND_CAP).
-  return lotteryWeight(n.kind) * Math.floor((tierFor(n, ep).multBp * bondFactorBp(n.bond + (n.delegated ?? 0))) / 1_000_000);
+  return lotteryWeight(n.kind) * Math.floor((tierFor(n, ep).multBp * bondFactorBp(n.bond + (n.delegated ?? 0n))) / 1_000_000);
 }
 
 /** Nodos que pueden producir bloques ahora: completos, registrados y con señal de vida reciente. */
@@ -445,15 +486,18 @@ export const proposeAfter = (slot: number, rank: number) => genesisTime() + slot
  * Aplica una transacción. Atómica: o cambia el estado entero, o devuelve un error sin tocar nada
  * (todas las comprobaciones van antes de la primera escritura).
  */
-export function applyTx(s: ChainState, tx: Tx, mode: AttestationMode = ATTESTATION_MODE): string | null {
-  const err = checkTx(tx);
+export function applyTx(s: ChainState, raw: Tx, mode: AttestationMode = ATTESTATION_MODE): string | null {
+  // Mainnet antes de la v4: reglas v3 congeladas sobre el estado equivalente (era.ts).
+  if (!isV4At(s.height)) return legacyApplyTx(s, raw, mode);
+  const err = checkTx(raw);
   if (err) return err;
+  const tx = (normalizeTx(raw) as { tx: Tx }).tx;
   const nonce = s.accounts[tx.from]?.nonce ?? 0;
   if (tx.nonce !== nonce) return `Nonce esperado ${nonce}`;
   const needBits = powRequired(s, tx);
   if (needBits > 0 && powBits(tx) < needBits) return `Falta el sello de trabajo (${needBits} bits)`;
   const minFee = requiredFee(s, tx);
-  if ("fee" in tx && tx.fee < minFee) return `Comisión mínima ${minFee} µVEL`;
+  if ("fee" in tx && tx.fee < minFee) return `Comisión mínima ${minFee} velos`;
   const vel = balanceOf(s, tx.from, VEL);
   let e: string | null = null;
   switch (tx.type) {
@@ -493,9 +537,9 @@ export function applyTx(s: ChainState, tx: Tx, mode: AttestationMode = ATTESTATI
         shardsDelivered: prev?.shardsDelivered ?? 0,
         credits: prev?.credits ?? 0,
         blocksProduced: prev?.blocksProduced ?? 0,
-        earned: prev?.earned ?? 0,
+        earned: prev?.earned ?? 0n,
         tier: prev?.tier ?? TIERS[0].id,
-        bond: prev?.bond ?? 0,
+        bond: prev?.bond ?? 0n,
         unbonding: prev?.unbonding ?? [],
         claimsOk: prev?.claimsOk ?? 0,
         claimsVoid: prev?.claimsVoid ?? 0,
@@ -518,7 +562,7 @@ export function applyTx(s: ChainState, tx: Tx, mode: AttestationMode = ATTESTATI
       credit(s, ESCROW_ADDRESS, tx.token, tx.amount);
       chargeFee(s, tx.from, tx.fee);
       const id = nextId(s, "p");
-      s.pools[id] = { id, token: tx.token, funder: tx.from, total: tx.amount, remaining: tx.amount, epochsLeft: tx.epochs, createdHeight: s.height, paid: 0 };
+      s.pools[id] = { id, token: tx.token, funder: tx.from, total: tx.amount, remaining: tx.amount, epochsLeft: tx.epochs, createdHeight: s.height, paid: 0n };
       break;
     }
     case "order.place": e = applyOrderPlace(s, tx); break;
@@ -552,10 +596,81 @@ export function applyTx(s: ChainState, tx: Tx, mode: AttestationMode = ATTESTATI
     case "stake.delegate": e = applyDelegate(s, tx); break;
     case "stake.undelegate": e = applyUndelegate(s, tx); break;
     case "node.commission": e = applyCommission(s, tx); break;
+    case "credits.buy": e = applyCreditsBuy(s, tx); break;
+    case "htlc.lock": e = applyHtlcLock(s, tx); break;
+    case "htlc.claim": e = applyHtlcClaim(s, tx); break;
+    case "htlc.refund": e = applyHtlcRefund(s, tx); break;
   }
   if (e) return e;
   if (needBits > 0) s.pow.used++;
   acct(s, tx.from).nonce++;
+  return null;
+}
+
+// ---------- HTLC: intercambio atómico (htlc.ts) ----------
+const htlcOff = (s: ChainState) => (protocolAt(s.height) < HTLC_PROTOCOL ? "Los candados hash-tiempo aún no están activos en esta red" : null);
+
+function applyHtlcLock(s: ChainState, tx: Extract<Tx, { type: "htlc.lock" }>): string | null {
+  const off = htlcOff(s);
+  if (off) return off;
+  const token = tx.token ?? VEL;
+  if (token !== VEL && !s.tokens[token]) return "Token desconocido";
+  const now = curEpoch(s);
+  if (tx.expiresEpoch <= now) return "La caducidad debe ser una época futura";
+  if (tx.expiresEpoch > now + HTLC_MAX_EPOCHS) return `Caducidad demasiado lejana (máximo ${HTLC_MAX_EPOCHS} épocas)`;
+  if (balanceOf(s, tx.from, token) < tx.amount) return token === VEL ? "Saldo insuficiente" : "Saldo de token insuficiente";
+  const all = (s.htlcs ??= {});
+  const id = htlcIdOf(tx);
+  if (all[id]) return "Candado repetido";
+  let open = 0;
+  for (const k in all) if (all[k]!.from === tx.from && ++open >= HTLC_MAX_OPEN) return `Demasiados candados abiertos (máximo ${HTLC_MAX_OPEN})`;
+  debit(s, tx.from, token, tx.amount);
+  credit(s, HTLC_ADDRESS, token, tx.amount);
+  all[id] = { id, from: tx.from, to: tx.to, token, amount: tx.amount, hash: tx.hash, expiresEpoch: tx.expiresEpoch, height: s.height };
+  return null;
+}
+
+function applyHtlcClaim(s: ChainState, tx: Extract<Tx, { type: "htlc.claim" }>): string | null {
+  const off = htlcOff(s);
+  if (off) return off;
+  const h = s.htlcs?.[tx.id];
+  if (!h) return "Candado desconocido o ya cerrado";
+  if (curEpoch(s) >= h.expiresEpoch) return "El candado ha caducado: solo se puede devolver";
+  if (htlcHash(tx.preimage) !== h.hash) return "El secreto no abre este candado";
+  debit(s, HTLC_ADDRESS, h.token, h.amount);
+  credit(s, h.to, h.token, h.amount);
+  delete s.htlcs![tx.id];
+  if (!Object.keys(s.htlcs!).length) delete s.htlcs;
+  return null;
+}
+
+function applyHtlcRefund(s: ChainState, tx: Extract<Tx, { type: "htlc.refund" }>): string | null {
+  const off = htlcOff(s);
+  if (off) return off;
+  const h = s.htlcs?.[tx.id];
+  if (!h) return "Candado desconocido o ya cerrado";
+  if (curEpoch(s) < h.expiresEpoch) return `Aún no ha caducado (época ${h.expiresEpoch})`;
+  debit(s, HTLC_ADDRESS, h.token, h.amount);
+  credit(s, h.from, h.token, h.amount);
+  delete s.htlcs![tx.id];
+  if (!Object.keys(s.htlcs!).length) delete s.htlcs;
+  return null;
+}
+
+/** Créditos de mensajería: el VEL va entero a la bolsa de nodos de la época (no se destruye ni va a la Reserva). */
+function applyCreditsBuy(s: ChainState, tx: Extract<Tx, { type: "credits.buy" }>): string | null {
+  const credits = creditsFor(s.oracle, tx.amount);
+  if (credits <= 0) return "Sin precio del oráculo: aún no se pueden comprar créditos";
+  if (balanceOf(s, tx.from, VEL) < tx.amount + tx.fee) return "Saldo insuficiente";
+  const to = tx.to ?? tx.from;
+  const prev = s.msgCredits[to] ?? 0;
+  if (prev + credits > Number.MAX_SAFE_INTEGER) return "Demasiados créditos en esa dirección";
+  debit(s, tx.from, VEL, tx.amount);
+  s.epoch.pool += tx.amount;
+  s.supply.creditsPaid += tx.amount;
+  s.supply.credits += credits;
+  s.msgCredits[to] = prev + credits;
+  chargeFee(s, tx.from, tx.fee);
   return null;
 }
 
@@ -761,16 +876,16 @@ function applyPresence(s: ChainState, p: Presence, height: number) {
 
 // ---------- Cierre de época ----------
 /** Reparto de los productores de la época que se cierra (15 % de la bolsa). */
-function payProducers(s: ChainState, ep: number, pot: number): { out: Reward[]; paid: number } {
+function payProducers(s: ChainState, ep: number, pot: bigint): { out: Reward[]; paid: bigint } {
   const out: Reward[] = [];
   const keys = sortedKeys(s.epoch.produced).filter((k) => s.nodes[k]);
   const total = keys.reduce((a, k) => a + s.epoch.produced[k]!, 0);
-  if (!total) return { out, paid: 0 };
-  let paid = 0;
+  if (!total) return { out, paid: 0n };
+  let paid = 0n;
   for (const k of keys) {
     const n = s.nodes[k]!;
     const amount = mulDiv(pot, s.epoch.produced[k]!, total);
-    if (amount <= 0) continue;
+    if (amount <= 0n) continue;
     const toDelegators = payNode(s, n, amount);
     n.earned += amount;
     paid += amount;
@@ -780,9 +895,9 @@ function payProducers(s: ChainState, ep: number, pot: number): { out: Reward[]; 
 }
 
 /** Liquida la época `E`: reparte su bolsa de trabajo entre las reclamaciones probadas. Devuelve lo que sobra. */
-function settleClaims(s: ChainState, E: number): { out: Reward[]; tokenRewards: TokenReward[]; carry: number } {
+function settleClaims(s: ChainState, E: number): { out: Reward[]; tokenRewards: TokenReward[]; carry: bigint } {
   const out: Reward[] = [];
-  const pot = s.workPots[String(E)] ?? 0;
+  const pot = s.workPots[String(E)] ?? 0n;
   const byNode = s.claims[String(E)] ?? {};
   const credited = E >= 0 ? creditedClaims(s, E) : [];
   for (const k of sortedKeys(byNode)) {
@@ -793,14 +908,14 @@ function settleClaims(s: ChainState, E: number): { out: Reward[]; tokenRewards: 
     else n.claimsVoid++; // nula o sin prueba a tiempo: pierde la recompensa de la época
   }
   const total = credited.reduce((a, c) => a + c.credited, 0);
-  let paid = 0;
+  let paid = 0n;
   if (total > 0) {
     for (const c of credited) {
       const n = s.nodes[c.node]!;
       n.credits += c.credited;
       n.shardsDelivered += c.credited;
       const amount = mulDiv(pot, c.credited, total);
-      if (amount <= 0) continue;
+      if (amount <= 0n) continue;
       const toDelegators = payNode(s, n, amount);
       n.earned += amount;
       paid += amount;
@@ -810,7 +925,7 @@ function settleClaims(s: ChainState, E: number): { out: Reward[]; tokenRewards: 
   s.supply.shards += total;
   const tokenRewards = distributePools(s, credited, total);
   const R = emissionFor(Math.max(0, E));
-  const difficulty = R > 0 ? Number((BigInt(total) * 1000n * BigInt(UNIT)) / BigInt(R)) : null;
+  const difficulty = R > 0n ? Number((BigInt(total) * 1000n * UNIT) / R) : null;
   if (E >= 0) {
     s.stats.difficulty = difficulty;
     s.stats.difficultyEpoch = E;
@@ -827,12 +942,12 @@ function distributePools(s: ChainState, credited: { node: string; credited: numb
   if (total === 0) return out; // sin trabajo, las bolsas esperan (no consumen épocas)
   for (const id of sortedKeys(s.pools)) {
     const p = s.pools[id]!;
-    const release = Math.floor(p.remaining / p.epochsLeft);
-    let paid = 0;
+    const release = p.remaining / BigInt(p.epochsLeft);
+    let paid = 0n;
     for (const c of credited) {
       const n = s.nodes[c.node]!;
       const amount = mulDiv(release, c.credited, total);
-      if (amount <= 0) continue;
+      if (amount <= 0n) continue;
       debit(s, ESCROW_ADDRESS, p.token, amount);
       credit(s, n.payout, p.token, amount);
       out.push({ pool: id, token: p.token, node: c.node, payout: n.payout, amount });
@@ -842,7 +957,7 @@ function distributePools(s: ChainState, credited: { node: string; credited: numb
     p.paid += paid;
     p.epochsLeft--;
     if (p.epochsLeft === 0) {
-      if (p.remaining > 0) { // restos de redondeo: vuelven a quien la financió
+      if (p.remaining > 0n) { // restos de redondeo: vuelven a quien la financió
         debit(s, ESCROW_ADDRESS, p.token, p.remaining);
         credit(s, p.funder, p.token, p.remaining);
       }
@@ -859,10 +974,12 @@ function distributePools(s: ChainState, credited: { node: string; credited: numb
 export function computeEpochPot(s: ChainState) {
   const ep = epochOf(s.height) - 1;
   const produced = sortedKeys(s.epoch.produced).reduce((a, k) => a + (s.nodes[k] ? s.epoch.produced[k]! : 0), 0);
-  const emission = produced > 0 ? Math.max(0, Math.min(emissionFor(Math.max(0, ep)), MAX_SUPPLY - s.supply.minted)) : 0;
-  const release = Math.floor((balanceOf(s, RESERVE_ADDRESS) * RESERVE_RELEASE_BP) / BP);
+  // Tope: lo acuñado en total (génesis + v3 + v4) nunca pasa de MAX_SUPPLY.
+  const room = MAX_SUPPLY - s.supply.minted;
+  const emission = produced > 0 ? minBig(emissionFor(Math.max(0, ep)), room > 0n ? room : 0n) : 0n;
+  const release = mulDiv(balanceOf(s, RESERVE_ADDRESS), RESERVE_RELEASE_BP, BP);
   const pot = s.epoch.pool + release + emission;
-  const producerPot = produced > 0 ? Math.floor((pot * PRODUCER_SHARE_BP) / BP) : 0;
+  const producerPot = produced > 0 ? mulDiv(pot, PRODUCER_SHARE_BP, BP) : 0n;
   return { ep, emission, release, pot, producerPot, minted: emission };
 }
 
@@ -872,7 +989,7 @@ export const computeRewards = computeEpochPot;
 function closeEpoch(s: ChainState): { rewards: Reward[]; tokenRewards: TokenReward[] } {
   const p = computeEpochPot(s);
   const X = p.ep;
-  if (p.release > 0) {
+  if (p.release > 0n) {
     debit(s, RESERVE_ADDRESS, VEL, p.release);
     s.supply.reserveOut += p.release;
   }
@@ -885,7 +1002,7 @@ function closeEpoch(s: ChainState): { rewards: Reward[]; tokenRewards: TokenRewa
     const n = s.nodes[addr]!;
     n.tier = tierFor(n, X).id;
     if (n.unbonding.length && n.unbonding.some((u) => u.release <= X)) {
-      const due = n.unbonding.filter((u) => u.release <= X).reduce((a, u) => a + u.amount, 0);
+      const due = n.unbonding.filter((u) => u.release <= X).reduce((a, u) => a + u.amount, 0n);
       n.unbonding = n.unbonding.filter((u) => u.release > X);
       debit(s, ESCROW_ADDRESS, VEL, due);
       credit(s, addr, VEL, due);
@@ -950,6 +1067,7 @@ export interface BuildInput {
  * Devuelve el bloque sin firmar y el estado resultante.
  */
 export function buildBlock(s: ChainState, input: BuildInput): { block: Omit<Block, "sig">; state: ChainState } {
+  if (!isV4At(s.height + 1)) return legacyBuildBlock(s, input);
   const next = cloneState(s);
   next.height = s.height + 1;
   next.ts = input.ts;
@@ -998,8 +1116,9 @@ export function buildBlock(s: ChainState, input: BuildInput): { block: Omit<Bloc
  * (El único uso del reloj es rechazar bloques del futuro; reaplicar bloques viejos no depende de él.)
  */
 export function applyBlock(s: ChainState, b: Block): { state: ChainState } | { error: string } {
-  const h = b.header;
+  const h = b?.header;
   if (!h || h.chain !== CHAIN_ID) return { error: "Cadena incorrecta" };
+  if (typeof h.height === "number" && h.height === s.height + 1 && !isV4At(h.height)) return legacyApplyBlock(s, b);
   if (h.height !== s.height + 1) return { error: `Altura ${h.height}, esperada ${s.height + 1}` };
   if (IS_MAINNET) {
     const want = protocolAt(h.height);
@@ -1039,9 +1158,9 @@ export function betterHead(a: { height: number; hash: string }, b: { height: num
  * Invariante de conservación (tests y auditoría): Σ saldos VEL (incluye vel_escrow y vel_reserve) + bolsa de
  * la época + bolsas de trabajo pendientes = acuñado. Devuelve la diferencia (debe ser 0 siempre).
  */
-export function velLedgerGap(s: ChainState): number {
+export function velLedgerGap(s: ChainState): bigint {
   let sum = s.epoch.pool;
   for (const k of sortedKeys(s.workPots)) sum += s.workPots[k]!;
-  for (const a of sortedKeys(s.balances)) sum += s.balances[a]![VEL] ?? 0;
+  for (const a of sortedKeys(s.balances)) sum += s.balances[a]![VEL] ?? 0n;
   return s.supply.minted - sum;
 }

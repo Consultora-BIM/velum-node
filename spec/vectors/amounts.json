@@ -1,0 +1,143 @@
+{
+  "protocol": 4,
+  "chain": "velum-testnet-4",
+  "description": "Importes v4: BigInt en memoria; en JSON y en el canónico, texto decimal sin signo, sin ceros a la izquierda, sin decimales, hasta 78 cifras. Un number JSON en un campo de importe hace la tx inválida. 1 VEL = 10^18 velos.",
+  "cases": [
+    {
+      "unit": "1000000000000000000",
+      "decimals": 18,
+      "maxSupply": "21000000000000000000000000000",
+      "genesisReserve": "100000000000000000000000000"
+    },
+    {
+      "valid": [
+        [
+          "0",
+          true
+        ],
+        [
+          "1",
+          true
+        ],
+        [
+          "1000000000000000000",
+          true
+        ],
+        [
+          "21000000000000000000000000000",
+          true
+        ],
+        [
+          "999999999999999999999999999999999999999999999999999999999999999999999999999999",
+          true
+        ]
+      ],
+      "invalid": [
+        [
+          "01",
+          false
+        ],
+        [
+          "-1",
+          false
+        ],
+        [
+          "1.5",
+          false
+        ],
+        [
+          "1e18",
+          false
+        ],
+        [
+          "",
+          false
+        ],
+        [
+          " 1",
+          false
+        ],
+        [
+          "9999999999999999999999999999999999999999999999999999999999999999999999999999999",
+          false
+        ]
+      ]
+    },
+    {
+      "tx": {
+        "type": "transfer",
+        "chain": "velum-testnet-4",
+        "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
+        "nonce": 0,
+        "ts": 1793494800000,
+        "to": "velEToY9jXh2CjmptAhPzzg8bVqUcsU1inD6ThtEoCvoset",
+        "amount": "1500000000000000001",
+        "fee": "0",
+        "pow": 58061,
+        "sig": "ee0b0ee4c85f5acb054dd3cfb932d951f6838ef950e95c448f8b035d43952f8ba7b1eb9585557397cd72994d4e3f7c849e09ce3dfa3c28e67dcb582c591a7b0a"
+      },
+      "canonical": "{\"amount\":\"1500000000000000001\",\"chain\":\"velum-testnet-4\",\"fee\":\"0\",\"from\":\"vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm\",\"nonce\":0,\"pow\":58061,\"sig\":\"ee0b0ee4c85f5acb054dd3cfb932d951f6838ef950e95c448f8b035d43952f8ba7b1eb9585557397cd72994d4e3f7c849e09ce3dfa3c28e67dcb582c591a7b0a\",\"to\":\"velEToY9jXh2CjmptAhPzzg8bVqUcsU1inD6ThtEoCvoset\",\"ts\":1793494800000,\"type\":\"transfer\"}",
+      "sameAsWire": true,
+      "txId": "3b55a29ca9596629a66cd6eacd836eb01ca0f641b15411df",
+      "checkTx": null,
+      "withNumberAmount": "Importe no válido (amount: texto decimal en velos)"
+    },
+    {
+      "format": [
+        {
+          "units": "1",
+          "decimals": 18,
+          "es": "0,000000000000000001",
+          "en": "0.000000000000000001"
+        },
+        {
+          "units": "1500000000000000000",
+          "decimals": 18,
+          "es": "1,5",
+          "en": "1.5"
+        },
+        {
+          "units": "21000000000000000000000000000",
+          "decimals": 18,
+          "es": "21.000.000.000",
+          "en": "21,000,000,000"
+        },
+        {
+          "units": "1234560",
+          "decimals": 6,
+          "es": "1,23456",
+          "en": "1.23456"
+        }
+      ]
+    },
+    {
+      "parse": [
+        {
+          "text": "12,5",
+          "decimals": 18,
+          "units": "12500000000000000000"
+        },
+        {
+          "text": "1.234,56",
+          "decimals": 18,
+          "units": "1234560000000000000000"
+        },
+        {
+          "text": "0,000000000000000001",
+          "decimals": 18,
+          "units": "1"
+        },
+        {
+          "text": "0,0000000000000000001",
+          "decimals": 18,
+          "units": null
+        },
+        {
+          "text": "1.5",
+          "decimals": 6,
+          "units": "1500000"
+        }
+      ]
+    }
+  ]
+}

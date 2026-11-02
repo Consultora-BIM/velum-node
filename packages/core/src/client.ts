@@ -21,6 +21,7 @@ import { decodeLinkMsg, encodeLinkMsg, LinkGuest, LinkHost, type LinkMailbox, ty
 import type { EpochInfo, HubToClient, PeerInfo, RpcMap, RpcMethod } from "./wire";
 import { lotteryCandidates, type EpochSnapshot } from "./lottery";
 import { GATEWAYS } from "./constants";
+import { makeRatePass, quotaSecret, type RatePass } from "./quota";
 import { LINK_FRAME_MS, MAX_DEVICES } from "./msgconst";
 import {
   cardKeys, cardLink, createInvite as newInvite, INVITE_TTL_MS, inviteFromSecret, openContactRequest, parseVelumLink,
@@ -59,6 +60,11 @@ export interface ClientOptions {
   url?: string | readonly string[];
   /** Fábrica de sockets (pruebas o transportes propios). */
   socket?: (url: string) => Socket;
+  /**
+   * Dirección con créditos de mensajería (`credits.buy`) para pasar del cupo gratis. Opcional: al usarla, los
+   * relés ven esa dirección junto al seudónimo de cupo del día (quota.ts). Pensado para bots y empresas.
+   */
+  quotaCredit?: { address: string; secret: string };
 }
 
 export interface SendProgress {
@@ -165,6 +171,20 @@ export class VelumClient {
     this.urls = typeof u === "string" ? [u] : [...u];
     if (!this.urls.length) throw new Error("Sin puertas de entrada");
     this.makeSocket = o.socket ?? defaultSocket;
+    this.quotaCredit = o.quotaCredit ?? null;
+  }
+
+  private quotaCredit: { address: string; secret: string } | null = null;
+  private quotaKey: { day: number; secret: string } | null = null;
+
+  /** Pase de envío (quota.ts) para una copia: seudónimo diario derivado de la clave del dispositivo. */
+  private passFor(msg: string): RatePass | undefined {
+    const dev = this.account?.device;
+    if (!dev) return undefined;
+    const now = Date.now();
+    const day = Math.floor(now / 86_400_000);
+    if (this.quotaKey?.day !== day) this.quotaKey = { day, secret: quotaSecret(dev.signSecret, now) };
+    return makeRatePass(this.quotaKey.secret, msg, now, this.quotaCredit ?? undefined);
   }
 
   /** Puerta en uso. */
@@ -558,6 +578,9 @@ export class VelumClient {
    * Si no hay ninguno, o falla, sale por cualquier otro (el trozo llega igual, pero ese papel no cobra nadie).
    */
   private async pushShards(shards: Shard[], prog: SendProgress, snap: EpochSnapshot | null = null) {
+    // Un pase por copia (todos sus trozos comparten `msg`): el relé cuenta la copia una vez.
+    const passes = new Map<string, RatePass | undefined>();
+    for (const s of shards) if (!passes.has(s.msg)) passes.set(s.msg, this.passFor(s.msg));
     const results = await Promise.allSettled(
       shards.map(async (shard) => {
         let lastErr: unknown;
@@ -565,7 +588,8 @@ export class VelumClient {
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
             const node = attempt === 0 && sorted && this.isReachable(sorted) ? sorted : this.pickNode();
-            await this.rpc("shard.put", { shard }, node);
+            const pass = passes.get(shard.msg);
+            await this.rpc("shard.put", pass ? { shard, pass } : { shard }, node);
             prog.accepted++;
             this.emit("progress", { ...prog });
             return true;
@@ -892,7 +916,7 @@ export class VelumClient {
     return { id: r.id ?? txId(tx), tx };
   }
   /** Pago en VEL o en otro token (la comisión siempre en VEL). */
-  async pay(to: string, amount: number, o: { token?: string; memo?: string } = {}): Promise<{ id: string; tx: Tx }> {
+  async pay(to: string, amount: bigint | string, o: { token?: string; memo?: string } = {}): Promise<{ id: string; tx: Tx }> {
     const w = this.walletKeys;
     return this.submit(makeTransfer(w.secret, w.address, to, amount, await this.nextNonce(), o));
   }

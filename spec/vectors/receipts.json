@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Recibo v2 anónimo: secret = HMAC-SHA512(rseed, shardId)[0..32]; válido si sha512(secret) == rh. receiptId = rh[0..48].",
   "cases": [
     {

@@ -1,6 +1,6 @@
 // Colas de espera: transacciones, recibos de entrega y señales de vida que aún no están en un bloque.
 import {
-  applyTx, checkTx, cloneState, receiptId, verifyReceipt, verifyObj, txId, RECEIPT_WINDOW_MS,
+  applyTx, checkTxAt, cloneState, receiptId, verifyReceipt, verifyObj, txId, RECEIPT_WINDOW_MS,
   type ChainState, type Presence, type Receipt, type Tx,
 } from "@velum/core";
 
@@ -43,7 +43,7 @@ export class Mempool {
   add(tx: Tx, s: ChainState): { id: string } | { error: string } {
     const id = txId(tx);
     if (this.txs.has(id)) return { id };
-    const err = checkTx(tx);
+    const err = checkTxAt(tx, s.height + 1); // formato v3 antes de la altura de la v4, v4 desde ella
     if (err) return { error: err };
     if (this.txs.size >= MAX_MEMPOOL) return { error: "Cola llena; vuelve a intentarlo en unos segundos" };
     const pend = this.pendingFrom(tx.from);

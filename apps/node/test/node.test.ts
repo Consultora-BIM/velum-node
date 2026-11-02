@@ -88,10 +88,10 @@ test("mempool: nonces seguidos, sin huecos ni duplicados, y saldo", () => {
   const f = V.faucetKeyPair();
   const s = V.genesisState();
   const mp = new Mempool();
-  const t0 = V.makeTransfer(f.secret, f.address, alice.address, 5 * V.UNIT, 0);
-  const t1 = V.makeTransfer(f.secret, f.address, bob.address, 5 * V.UNIT, 1);
-  const t3 = V.makeTransfer(f.secret, f.address, bob.address, 5 * V.UNIT, 3);
-  const dup = V.makeTransfer(f.secret, f.address, bob.address, 7 * V.UNIT, 1);
+  const t0 = V.makeTransfer(f.secret, f.address, alice.address, 5n * V.UNIT, 0);
+  const t1 = V.makeTransfer(f.secret, f.address, bob.address, 5n * V.UNIT, 1);
+  const t3 = V.makeTransfer(f.secret, f.address, bob.address, 5n * V.UNIT, 3);
+  const dup = V.makeTransfer(f.secret, f.address, bob.address, 7n * V.UNIT, 1);
   expect("id" in mp.add(t1, s)).toBe(false); // hueco
   expect("id" in mp.add(t0, s)).toBe(true);
   expect("id" in mp.add(t1, s)).toBe(true);
@@ -99,10 +99,10 @@ test("mempool: nonces seguidos, sin huecos ni duplicados, y saldo", () => {
   expect("error" in mp.add(t3, s)).toBe(true);
   expect(mp.select(s).map((t) => t.nonce)).toEqual([0, 1]);
   const carol = V.keyPairFromText("t-carol");
-  const poor = V.makeTransfer(carol.secret, carol.address, bob.address, 1, 0);
+  const poor = V.makeTransfer(carol.secret, carol.address, bob.address, 1n, 0);
   expect(mp.add(poor, s)).toEqual({ error: "Saldo insuficiente" });
   // alice sí puede: el estado de prueba ya incluye los 5 VEL que le llegan en cola.
-  expect("id" in mp.add(V.makeTransfer(alice.secret, alice.address, bob.address, 1, 0), s)).toBe(true);
+  expect("id" in mp.add(V.makeTransfer(alice.secret, alice.address, bob.address, 1n, 0), s)).toBe(true);
 });
 
 test("recibos v2: anónimos; válidos si el secreto cuadra con la huella y están en plazo", () => {
@@ -132,19 +132,19 @@ test("mempool: prueba cada tx sobre el estado de prueba (tokens, sello PoW, merc
   const f = V.faucetKeyPair();
   const s = V.genesisState();
   const mp = new Mempool();
-  const eur = V.makeTransfer(f.secret, f.address, alice.address, 50_000_000, 0, { token: "tEUR" });
+  const eur = V.makeTransfer(f.secret, f.address, alice.address, 50_000_000n, 0, { token: "tEUR" });
   expect("id" in mp.add(eur, s)).toBe(true);
   // alice aún no tiene VEL: vender VEL no entra; tras recibirlos en cola, sí.
-  const sell = V.makeOrder(alice.secret, alice.address, 0, { pair: "VEL/tEUR", side: "sell", price: 2_000_000, amount: 4 * V.UNIT });
+  const sell = V.makeOrder(alice.secret, alice.address, 0, { pair: "VEL/tEUR", side: "sell", price: 2_000_000, amount: 4n * V.UNIT });
   expect("error" in mp.add(sell, s)).toBe(true);
-  const vel = V.makeTransfer(f.secret, f.address, alice.address, 5 * V.UNIT, 1);
+  const vel = V.makeTransfer(f.secret, f.address, alice.address, 5n * V.UNIT, 1);
   expect("id" in mp.add(vel, s)).toBe(true);
   expect("id" in mp.add(sell, s)).toBe(true);
   // Lo bloqueado en la orden cuenta para lo siguiente.
-  const tooMuch = V.makeTransfer(alice.secret, alice.address, bob.address, 2 * V.UNIT, 1);
+  const tooMuch = V.makeTransfer(alice.secret, alice.address, bob.address, 2n * V.UNIT, 1);
   expect("error" in mp.add(tooMuch, s)).toBe(true);
   // Sin sello PoW (comisión 0) no entra.
-  const { pow: _p, ...noPow } = V.makeTransfer(alice.secret, alice.address, bob.address, 1, 1) as V.TransferTx & { pow?: number };
+  const { pow: _p, ...noPow } = V.makeTransfer(alice.secret, alice.address, bob.address, 1n, 1) as V.TransferTx & { pow?: number };
   expect("error" in mp.add(V.signTx(alice.secret, noPow as any) as V.Tx, s)).toBe(true);
   expect(mp.select(s).length).toBe(3);
 });

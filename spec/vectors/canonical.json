@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "JSON canónico (claves ordenadas, sin espacios, sin undefined) y SHA-256 hex de ese texto (hashObj).",
   "cases": [
     {

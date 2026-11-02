@@ -6,6 +6,8 @@ export * from "./tx";
 export * from "./rpc";
 export * from "./deposits";
 export * from "./identicon";
+export * from "./payments";
 export {
-  CHAIN_ID, UNIT, VEL, canonical, generatePhrase, validatePhrase, formatAmount, parseAmount, type FeeContext, type Tx,
+  CHAIN_ID, UNIT, VEL, VEL_DECIMALS, canonical, generatePhrase, validatePhrase, formatAmount, parseAmount, toAmount, amountOrNull,
+  MAX_SUPPLY, txView, type FeeContext, type Tx,
 } from "@velum/core";

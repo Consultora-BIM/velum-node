@@ -2,9 +2,12 @@
 // Todas las transacciones las firma la clave de CARTERA (`from` = dirección de cartera; en las de nodo, la del nodo).
 // `checkTx` comprueba formato y firma (sin estado); el saldo, el nonce, la comisión mínima, el sello PoW y
 // las reglas con estado van en `applyTx` (state.ts).
+// v4: los importes son BigInt (`Amount`). En la red viajan como texto decimal; `normalizeTx` los pasa a BigInt.
+// Firma y txId no cambian: la codificación canónica de 5n y de "5" es la misma ("5").
 import { canonical, hashObj, merkleRoot } from "./bytes";
+import { type Amount, amountOrNull } from "./amount";
 import {
-  COMMISSION_MAX_BP, CARD_MAX_CHARS, CHAIN_ID, CLAIM_MAX_COUNT, CLAIM_SAMPLES, MAX_PRICE, MIN_ORDER, NAME_RE, ORDER_TTL_MAX, POOL_MAX_EPOCHS,
+  COMMISSION_MAX_BP, CREDIT_MIN_BUY, CARD_MAX_CHARS, CHAIN_ID, CLAIM_MAX_COUNT, CLAIM_SAMPLES, MAX_PRICE, MIN_ORDER, NAME_RE, ORDER_TTL_MAX, POOL_MAX_EPOCHS,
   REGIONS, TOKEN_CREATE_FEE, TOKEN_MAX_DECIMALS, TOKEN_SYMBOL_RE, VEL, type NodeKind, type Region,
 } from "./constants";
 import { sign, verify, isAddress } from "./keys";
@@ -30,9 +33,9 @@ interface TxBase {
 export interface TransferTx extends TxBase {
   type: "transfer";
   to: string;
-  amount: number; // unidades mínimas del token (µVEL si es VEL)
-  /** µVEL. Mínimo `requiredFee` (state.ts); si es 0 hace falta sello PoW. */
-  fee: number;
+  amount: Amount; // unidades mínimas del token (velos si es VEL)
+  /** Velos. Mínimo `requiredFee` (state.ts); si es 0 hace falta sello PoW. */
+  fee: Amount;
   /** Token a enviar; ausente = VEL. */
   token?: string;
   /** Nota opcional (un hash o texto corto; nunca el contenido de un chat). */
@@ -60,10 +63,10 @@ export interface TokenCreateTx extends TxBase {
   symbol: string;
   name: string;
   decimals: number;
-  maxSupply: number;
-  initial: number;
+  maxSupply: Amount;
+  initial: Amount;
   mintable: boolean;
-  fee: number; // TOKEN_CREATE_FEE
+  fee: Amount; // TOKEN_CREATE_FEE
 }
 
 /** Emite más unidades (solo el emisor, hasta maxSupply). */
@@ -71,26 +74,26 @@ export interface TokenMintTx extends TxBase {
   type: "token.mint";
   symbol: string;
   to: string;
-  amount: number;
-  fee: number; // 0 + sello PoW (o lo que quiera pagar)
+  amount: Amount;
+  fee: Amount; // 0 + sello PoW (o lo que quiera pagar)
 }
 
 /** Reparte `amount` de un token entre los nodos durante `epochs` épocas, según su trabajo. */
 export interface PoolFundTx extends TxBase {
   type: "pool.fund";
   token: string;
-  amount: number;
+  amount: Amount;
   epochs: number;
-  fee: number; // 0 + sello PoW (o lo que quiera pagar)
+  fee: Amount; // 0 + sello PoW (o lo que quiera pagar)
 }
 
-/** Orden en el libro `VEL/<token>`. price en unidades mínimas del token por 1 VEL; amount en µVEL. Lleva sello PoW. */
+/** Orden en el libro `VEL/<token>`. price (number entero) en unidades mínimas del token por 1 VEL; amount en velos. Lleva sello PoW. */
 export interface OrderPlaceTx extends TxBase {
   type: "order.place";
   pair: string;
   side: "buy" | "sell";
   price: number;
-  amount: number;
+  amount: Amount;
   /** Caducidad en épocas (por defecto ORDER_TTL_DEFAULT). */
   ttl?: number;
 }
@@ -114,13 +117,13 @@ export interface DeviceAttestTx extends TxBase {
 /** Fianza opcional de un nodo (`from` = nodo): sube su peso en el sorteo hasta ×2. */
 export interface NodeBondTx extends TxBase {
   type: "node.bond";
-  amount: number;
+  amount: Amount;
 }
 
 /** Desbloquea fianza: vuelve al nodo tras 14 días. */
 export interface NodeUnbondTx extends TxBase {
   type: "node.unbond";
-  amount: number;
+  amount: Amount;
 }
 
 /** Reclamación de trabajo de la época `epoch` (`from` = nodo): nº de hojas y raíz de Merkle SHA-512. */
@@ -162,7 +165,8 @@ export interface NameReleaseTx extends TxBase {
 export interface BridgeMintTx extends TxBase {
   type: "bridge.mint";
   to: string;
-  amount: number;
+  /** µvUSDT (6 decimales). */
+  amount: Amount;
   /** Cadena del depósito. */
   src: "tron" | "polygon" | "ethereum";
   /** `<cadena>:<hash>:<índice>` o `refund:<id de canje>`. */
@@ -174,21 +178,36 @@ export interface BridgeRedeemTx extends TxBase {
   type: "bridge.redeem";
   dst: "tron" | "polygon" | "ethereum";
   to: string;
-  amount: number;
-  fee: number;
+  /** µvUSDT (6 decimales). */
+  amount: Amount;
+  fee: Amount;
 }
 
 /** Staking: delegar VEL a un nodo (suma a su peso en el sorteo). Lleva sello. */
-export interface StakeDelegateTx extends TxBase { type: "stake.delegate"; node: string; amount: number }
+export interface StakeDelegateTx extends TxBase { type: "stake.delegate"; node: string; amount: Amount }
 /** Staking: retirar delegación (vuelve tras 14 días). Lleva sello. */
-export interface StakeUndelegateTx extends TxBase { type: "stake.undelegate"; node: string; amount: number }
+export interface StakeUndelegateTx extends TxBase { type: "stake.undelegate"; node: string; amount: Amount }
 /** El nodo (`from`) fija su comisión sobre lo que descubre con delegación: 0–2.000 pb. Lleva sello. */
 export interface NodeCommissionTx extends TxBase { type: "node.commission"; bp: number }
+/**
+ * Créditos de mensajería (v4): convierte `amount` velos en créditos NO transferibles para `to` (por defecto `from`).
+ * Para empresas y bots que envían por encima del cupo gratuito. El VEL va entero a la bolsa de nodos de la época.
+ * Créditos = floor(amount × precio USDT del oráculo / 10^18 / CREDIT_PRICE_USDT). Sin precio no entra. Lleva sello.
+ */
+export interface CreditsBuyTx extends TxBase { type: "credits.buy"; amount: Amount; to?: string; fee: Amount }
+/**
+ * HTLC (htlc.ts, docs/intercambio-p2p.md): bloquea `amount` para `to` hasta la época `expiresEpoch`. Lo cobra `to` con el
+ * secreto cuyo sha256 es `hash`; si caduca, vuelve a `from`. Las tres llevan sello y no tienen comisión.
+ */
+export interface HtlcLockTx extends TxBase { type: "htlc.lock"; to: string; amount: Amount; token?: string; hash: string; expiresEpoch: number }
+export interface HtlcClaimTx extends TxBase { type: "htlc.claim"; id: string; preimage: string }
+export interface HtlcRefundTx extends TxBase { type: "htlc.refund"; id: string }
 
 export type Tx =
   | TransferTx | RegisterTx | TokenCreateTx | TokenMintTx | PoolFundTx | OrderPlaceTx | OrderCancelTx | DeviceAttestTx
   | NodeBondTx | NodeUnbondTx | WorkClaimTx | WorkProveTx | NameRegisterTx | NameRenewTx | NameReleaseTx
-  | BridgeMintTx | BridgeRedeemTx | StakeDelegateTx | StakeUndelegateTx | NodeCommissionTx;
+  | BridgeMintTx | BridgeRedeemTx | StakeDelegateTx | StakeUndelegateTx | NodeCommissionTx | CreditsBuyTx
+  | HtlcLockTx | HtlcClaimTx | HtlcRefundTx;
 export type TxType = Tx["type"];
 
 export const txId = (tx: Tx) => hashObj(tx).slice(0, 48);
@@ -204,7 +223,47 @@ export function verifyTxSig(tx: Tx): boolean {
 }
 
 export const isSafeUint = (n: unknown): n is number => typeof n === "number" && Number.isSafeInteger(n) && n >= 0;
-const isPositive = (n: unknown): n is number => isSafeUint(n) && n > 0;
+
+/** Campos de importe (BigInt en memoria, texto decimal en la red) de cada tipo de tx. */
+export const TX_AMOUNT_FIELDS: Partial<Record<TxType, readonly string[]>> = {
+  "transfer": ["amount", "fee"],
+  "token.create": ["maxSupply", "initial", "fee"],
+  "token.mint": ["amount", "fee"],
+  "pool.fund": ["amount", "fee"],
+  "order.place": ["amount"],
+  "node.bond": ["amount"],
+  "node.unbond": ["amount"],
+  "bridge.mint": ["amount"],
+  "bridge.redeem": ["amount", "fee"],
+  "stake.delegate": ["amount"],
+  "stake.undelegate": ["amount"],
+  "credits.buy": ["amount", "fee"],
+  "htlc.lock": ["amount"],
+};
+
+/**
+ * Copia de la tx con los importes en BigInt (desde texto decimal o BigInt). Un `number` en un campo de importe
+ * es un error: así una tx v3 (µVEL) nunca se confunde con una v4 (velos). La firma no cambia (canonical).
+ */
+export function normalizeTx<T extends Tx>(tx: T): { tx: T } | { error: string } {
+  if (!tx || typeof tx !== "object") return { error: "Tx mal formada" };
+  const fields = TX_AMOUNT_FIELDS[tx.type];
+  if (!fields) return { tx };
+  const out: any = { ...tx };
+  for (const f of fields) {
+    const v = (tx as any)[f];
+    if (v === undefined) continue;
+    const a = amountOrNull(v);
+    if (a === null) return { error: `Importe no válido (${f}: texto decimal en velos)` };
+    out[f] = a;
+  }
+  return { tx: out };
+}
+
+/** Importe ya normalizado y positivo. */
+const isPositive = (n: unknown): n is bigint => typeof n === "bigint" && n > 0n;
+/** Importe ya normalizado (≥ 0). */
+const isAmt = (n: unknown): n is bigint => typeof n === "bigint" && n >= 0n;
 /** Símbolo de token válido como clave (incluye los de génesis `tEUR`/`tUSD`/`tUSDT`, que no se pueden crear). */
 export const isTokenKey = (s: unknown): s is string => typeof s === "string" && /^[A-Za-z0-9]{3,8}$/.test(s);
 export const isNewTokenSymbol = (s: unknown): s is string => typeof s === "string" && TOKEN_SYMBOL_RE.test(s) && s !== VEL;
@@ -228,8 +287,11 @@ function leafProblem(l: unknown): string | null {
 }
 
 /** Comprobación sin estado (formato y firma). El saldo, el nonce y las reglas de negocio van en applyTx. */
-export function checkTx(tx: Tx): string | null {
-  if (!tx || typeof tx !== "object" || tx.chain !== CHAIN_ID) return "Cadena incorrecta";
+export function checkTx(raw: Tx): string | null {
+  if (!raw || typeof raw !== "object" || raw.chain !== CHAIN_ID) return "Cadena incorrecta";
+  const n = normalizeTx(raw);
+  if ("error" in n) return n.error;
+  const tx = n.tx;
   if (!isAddress(tx.from)) return "Remitente no válido";
   if (!isSafeUint(tx.nonce)) return "Nonce no válido";
   if (typeof tx.ts !== "number" || !Number.isFinite(tx.ts)) return "Hora no válida";
@@ -238,7 +300,7 @@ export function checkTx(tx: Tx): string | null {
     case "transfer":
       if (!isAddress(tx.to)) return "Destino no válido";
       if (!isPositive(tx.amount)) return "Importe no válido";
-      if (!isSafeUint(tx.fee)) return "Comisión no válida";
+      if (!isAmt(tx.fee)) return "Comisión no válida";
       if (tx.token !== undefined && (!isTokenKey(tx.token) || tx.token === VEL)) return "Token no válido";
       if (tx.memo !== undefined && (typeof tx.memo !== "string" || tx.memo.length > 128)) return "Nota demasiado larga";
       break;
@@ -256,7 +318,7 @@ export function checkTx(tx: Tx): string | null {
       if (typeof tx.name !== "string" || !tx.name || tx.name.length > 40) return "Nombre no válido";
       if (!Number.isInteger(tx.decimals) || tx.decimals < 0 || tx.decimals > TOKEN_MAX_DECIMALS) return "Decimales no válidos";
       if (!isPositive(tx.maxSupply)) return "Suministro máximo no válido";
-      if (!isSafeUint(tx.initial) || tx.initial > tx.maxSupply) return "Emisión inicial no válida";
+      if (!isAmt(tx.initial) || tx.initial > tx.maxSupply) return "Emisión inicial no válida";
       if (typeof tx.mintable !== "boolean") return "mintable no válido";
       if (tx.fee !== TOKEN_CREATE_FEE) return "Comisión incorrecta";
       break;
@@ -264,20 +326,20 @@ export function checkTx(tx: Tx): string | null {
       if (!isTokenKey(tx.symbol) || tx.symbol === VEL) return "Token no válido";
       if (!isAddress(tx.to)) return "Destino no válido";
       if (!isPositive(tx.amount)) return "Importe no válido";
-      if (!isSafeUint(tx.fee)) return "Comisión no válida";
+      if (!isAmt(tx.fee)) return "Comisión no válida";
       break;
     case "pool.fund":
       if (!isTokenKey(tx.token)) return "Token no válido";
       if (!isPositive(tx.amount)) return "Importe no válido";
       if (!Number.isInteger(tx.epochs) || tx.epochs < 1 || tx.epochs > POOL_MAX_EPOCHS) return "Épocas no válidas";
-      if (tx.amount < tx.epochs) return "Importe menor que el nº de épocas";
-      if (!isSafeUint(tx.fee)) return "Comisión no válida";
+      if (tx.amount < BigInt(tx.epochs)) return "Importe menor que el nº de épocas";
+      if (!isAmt(tx.fee)) return "Comisión no válida";
       break;
     case "order.place":
       if (!tokenOfPair(tx.pair)) return "Par no válido";
       if (tx.side !== "buy" && tx.side !== "sell") return "Lado no válido";
-      if (!isPositive(tx.price) || tx.price > MAX_PRICE) return "Precio no válido";
-      if (!isSafeUint(tx.amount) || tx.amount < MIN_ORDER) return "Cantidad por debajo del mínimo";
+      if (!isSafeUint(tx.price) || tx.price <= 0 || tx.price > MAX_PRICE) return "Precio no válido";
+      if (!isAmt(tx.amount) || tx.amount < MIN_ORDER) return "Cantidad por debajo del mínimo";
       if (tx.ttl !== undefined && (!Number.isInteger(tx.ttl) || tx.ttl < 1 || tx.ttl > ORDER_TTL_MAX)) return "Caducidad no válida";
       break;
     case "order.cancel":
@@ -294,7 +356,7 @@ export function checkTx(tx: Tx): string | null {
       break;
     case "work.claim":
       if (!isSafeUint(tx.epoch)) return "Época no válida";
-      if (!isPositive(tx.count) || tx.count > CLAIM_MAX_COUNT) return "Nº de hojas no válido";
+      if (!isSafeUint(tx.count) || tx.count === 0 || tx.count > CLAIM_MAX_COUNT) return "Nº de hojas no válido";
       if (typeof tx.root !== "string" || !H128_RE.test(tx.root)) return "Raíz no válida";
       break;
     case "work.prove": {
@@ -325,7 +387,7 @@ export function checkTx(tx: Tx): string | null {
       if (!isBridgeChain(tx.dst)) return "Cadena de destino no válida";
       if (!isBridgeDestination(tx.dst, tx.to)) return "Dirección de destino no válida para esa cadena";
       if (!isPositive(tx.amount)) return "Importe no válido";
-      if (tx.fee !== 0) return "El canje no lleva comisión (lleva sello)";
+      if (tx.fee !== 0n) return "El canje no lleva comisión (lleva sello)";
       break;
     case "stake.delegate":
     case "stake.undelegate":
@@ -335,10 +397,29 @@ export function checkTx(tx: Tx): string | null {
     case "node.commission":
       if (!Number.isInteger(tx.bp) || tx.bp < 0 || tx.bp > COMMISSION_MAX_BP) return "Comisión no válida (0–2.000 pb)";
       break;
+    case "credits.buy":
+      if (!isPositive(tx.amount) || tx.amount < CREDIT_MIN_BUY) return "Compra mínima de créditos: 1 VEL";
+      if (tx.to !== undefined && !isAddress(tx.to)) return "Destino no válido";
+      if (!isAmt(tx.fee)) return "Comisión no válida";
+      break;
+    case "htlc.lock":
+      if (!isAddress(tx.to)) return "Destino no válido";
+      if (!isPositive(tx.amount)) return "Importe no válido";
+      if (tx.token !== undefined && (!isTokenKey(tx.token) || tx.token === VEL)) return "Token no válido";
+      if (typeof tx.hash !== "string" || !/^[0-9a-f]{64}$/.test(tx.hash)) return "Huella no válida (sha256 en hex)";
+      if (!isSafeUint(tx.expiresEpoch)) return "Caducidad no válida";
+      break;
+    case "htlc.claim":
+      if (typeof tx.id !== "string" || !/^h[0-9a-f]{48}$/.test(tx.id)) return "Candado no válido";
+      if (typeof tx.preimage !== "string" || !/^[0-9a-f]{64}$/.test(tx.preimage)) return "Secreto no válido (32 bytes en hex)";
+      break;
+    case "htlc.refund":
+      if (typeof tx.id !== "string" || !/^h[0-9a-f]{48}$/.test(tx.id)) return "Candado no válido";
+      break;
     default:
       return "Tipo desconocido";
   }
-  if (!verifyTxSig(tx)) return "Firma no válida";
+  if (!verifyTxSig(raw)) return "Firma no válida";
   return null;
 }
 
@@ -395,9 +476,9 @@ export interface BlockHeader {
  * Recompensa en VEL. `kind`: "producer" (15 % por bloques de la época que se cierra) o "work" (reparto por
  * trabajo verificado de la época `epoch`, que se liquida 4 épocas después). `shards` = créditos verificados.
  */
-export interface Reward { node: string; payout: string; amount: number; shards: number; tier: string; epoch?: number; kind?: "producer" | "work"; /** Parte que fue a sus delegados. */ delegators?: number }
+export interface Reward { node: string; payout: string; amount: Amount; shards: number; tier: string; epoch?: number; kind?: "producer" | "work"; /** Parte que fue a sus delegados. */ delegators?: Amount }
 /** Recompensa de una bolsa de token (`pool.fund`). */
-export interface TokenReward { pool: string; token: string; node: string; payout: string; amount: number }
+export interface TokenReward { pool: string; token: string; node: string; payout: string; amount: Amount }
 
 export interface Block {
   header: BlockHeader;

@@ -14,7 +14,8 @@ export interface BridgeMintTx {
   nonce: number;
   ts: number;
   to: string;
-  amount: number;
+  /** µvUSDT (6 decimales). BigInt; en la red, texto decimal (v4). */
+  amount: bigint | string;
   /** Cadena de origen del depósito. */
   src: ChainId;
   ref: string;
@@ -30,8 +31,9 @@ export interface BridgeRedeemTx {
   ts: number;
   dst: ChainId;
   to: string;
-  amount: number;
-  fee: number;
+  /** µvUSDT. Texto decimal desde la v4 (antes de la v4, number). */
+  amount: bigint | string | number;
+  fee: bigint | string | number;
   pow?: number;
   sig: string;
 }
@@ -43,7 +45,7 @@ export function signVelTx<T extends { sig?: string }>(secret: string, tx: Omit<T
   return { ...rest, sig: sign(secret, canonical(rest)) } as T;
 }
 
-export function makeMint(key: KeyPair, chainId: string, nonce: number, to: string, amount: number, src: ChainId, ref: string, ts = Date.now()): BridgeMintTx {
+export function makeMint(key: KeyPair, chainId: string, nonce: number, to: string, amount: bigint, src: ChainId, ref: string, ts = Date.now()): BridgeMintTx {
   return signVelTx<BridgeMintTx>(key.secret, { type: "bridge.mint", chain: chainId, from: key.address, nonce, ts, to, amount, src, ref });
 }
 
@@ -57,7 +59,8 @@ export interface VelumPort {
   head(): Promise<number>;
   blocks(from: number, to: number): Promise<VelumBlockLite[]>;
   nonce(address: string): Promise<{ nonce: number; pending: number }>;
-  tokenSupply(symbol: string): Promise<number>;
+  /** Suministro en µvUSDT (texto decimal en la RPC v4). */
+  tokenSupply(symbol: string): Promise<string | number>;
   submit(tx: object): Promise<string>;
 }
 
@@ -128,6 +131,6 @@ export class VelumWs implements VelumPort {
     const a = await this.call<{ nonce: number; pending: number }>("account.get", { address });
     return { nonce: a.nonce, pending: a.pending ?? 0 };
   }
-  async tokenSupply(symbol: string) { return (await this.call<{ supply: number } | null>("token.info", { symbol }))?.supply ?? 0; }
+  async tokenSupply(symbol: string) { return String((await this.call<{ supply: string } | null>("token.info", { symbol }))?.supply ?? "0"); }
   async submit(tx: object) { return (await this.call<{ id: string }>("tx.submit", { tx })).id; }
 }

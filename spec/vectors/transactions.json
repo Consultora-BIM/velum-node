@@ -1,46 +1,46 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Transacciones firmadas con la clave de cartera (ed25519 sobre JSON canónico sin 'sig'). txId = sha256(canónico)[0..48].",
   "cases": [
     {
       "tx": {
         "type": "transfer",
-        "chain": "velum-testnet-3",
+        "chain": "velum-testnet-4",
         "from": "velBmtN6nS7TDRt7HzE3KZo2dsZEVbsKqgGiSmAt9dLPFnU",
         "nonce": 0,
         "ts": 1793494800000,
         "to": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
-        "amount": 5000000,
-        "fee": 0,
+        "amount": "5000000000000000000",
+        "fee": "0",
         "memo": "hola",
-        "pow": 25240,
-        "sig": "661aa55169306b2d71b8d1005951667cdb700bf22781f8ed43f412ddb7d09d2e85387705b0e7f1fd062beb2a880c6f3509e1b6c0e2b52c16a9374e3a514fe50d"
+        "pow": 210962,
+        "sig": "8a3a85dfe1062557f309d711a2463522d9e354506827968c0c7d3f46f6124bb45aecfb01a8f70034c9c593bfee44aee264c2bf7c3b6f8a9dc9d1774fa893c007"
       },
-      "txId": "b62402211949648cf1ac464612fa73022d1820c6098d9aee",
+      "txId": "90fb1f40714d681e78f32f229a817511c3cc025fad59cf22",
       "checkTx": null
     },
     {
       "tx": {
         "type": "transfer",
-        "chain": "velum-testnet-3",
+        "chain": "velum-testnet-4",
         "from": "velBmtN6nS7TDRt7HzE3KZo2dsZEVbsKqgGiSmAt9dLPFnU",
         "nonce": 1,
         "ts": 1793494800000,
         "to": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
-        "amount": 7000000,
-        "fee": 0,
+        "amount": "7000000",
+        "fee": "0",
         "token": "tEUR",
-        "pow": 17476,
-        "sig": "8aec51c55d88598bc1b9a675ae21af5eef7f64582d5d3084df454dd72ec1c4d9a392347541a7bdf19571eac04d2027d449b4adfdd78e605b6d5aac33555e2602"
+        "pow": 87381,
+        "sig": "02eec5c93999e85b3876703dacd209680fb98709b12481486af1bc7b20e57491068b5d6da7d69b623e06ae403b8169523170aeb864a9b13b6c12a94f99cc820c"
       },
-      "txId": "c7991deec8f576fe3f23608297a0445836bd53e895c12704",
+      "txId": "442caa1b7ece17a3a2913d4ea81f7243a383a279dc7a1792",
       "checkTx": null
     },
     {
       "tx": {
         "type": "register",
-        "chain": "velum-testnet-3",
+        "chain": "velum-testnet-4",
         "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
         "nonce": 0,
         "ts": 1793494800000,
@@ -48,9 +48,9 @@
         "payout": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
         "version": "2.0.0",
         "kind": "light",
-        "sig": "d0a18106c8d7a401ca9f527c9a213ff8b47edd03633e42d10ff84f4199e5462a07cdd94adda6d823c696bb4bcaf934fa3c26477ece0e6ed93f1f7f70f9a98a03"
+        "sig": "6123a04d3cdce44a9383d20ed385b168bf6aa18e5758d1021b79f84c1389c7d59ad1d634dc29ea71f2dfd95c1aa3e35854127440074b88d226a61d9872b5a502"
       },
-      "txId": "78101ed6dc333042538e0da1256c1db8e8ce6f18659363b1",
+      "txId": "c49327e3de68de9e9ce4925518be828f4c46f6a5261ed958",
       "checkTx": null
     }
   ]

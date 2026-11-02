@@ -35,8 +35,9 @@ export const isBridgeChain = (c: unknown): c is BridgeChain => typeof c === "str
 export const isBridgeDestination = (chain: BridgeChain, to: unknown) => (chain === "tron" ? isTronAddress(to) : isEvmAddress(to));
 export const isBridgeRef = (r: unknown) => typeof r === "string" && r.length > 0 && r.length <= BRIDGE_REF_MAX && /^[a-z0-9:_-]+$/i.test(r);
 
-export interface BridgeState { refs: Record<string, number>; minted: number; redeemed: number; redeems: number }
-const bstate = (s: ChainState): BridgeState => ((s as any).bridge ??= { refs: {}, minted: 0, redeemed: 0, redeems: 0 });
+/** `minted`/`redeemed` en µvUSDT (BigInt). */
+export interface BridgeState { refs: Record<string, number>; minted: bigint; redeemed: bigint; redeems: number }
+const bstate = (s: ChainState): BridgeState => ((s as any).bridge ??= { refs: {}, minted: 0n, redeemed: 0n, redeems: 0 });
 
 export function applyBridgeMint(s: ChainState, tx: BridgeMintTx): string | null {
   const t = s.tokens[BRIDGE_TOKEN];

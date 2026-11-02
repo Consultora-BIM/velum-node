@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cobrar con Velum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root { --tinta: #111; --papel: #f4f1ea; --gris: #8a857b; --ok: #19c37d; --borde: 3px solid var(--tinta); }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--papel); color: var(--tinta); font-family: "Bricolage Grotesque", system-ui, sans-serif; display: grid; place-items: center; padding: 16px; transition: background .35s; }
+  body.pagado { background: var(--ok); }
+  main { width: min(420px, 100%); border: var(--borde); background: #fff; padding: 24px; box-shadow: 8px 8px 0 var(--tinta); }
+  h1 { font-size: 14px; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 16px; }
+  .importe { display: flex; align-items: baseline; gap: 8px; border-bottom: var(--borde); padding-bottom: 8px; }
+  .importe input { font: 800 56px/1 inherit; border: 0; outline: 0; width: 100%; background: transparent; color: inherit; min-width: 0; }
+  .importe span { font-weight: 700; font-size: 20px; }
+  .concepto { width: 100%; margin-top: 12px; font: 400 16px inherit; border: 0; border-bottom: 1px solid var(--gris); padding: 8px 0; outline: 0; }
+  button { margin-top: 20px; width: 100%; font: 800 20px inherit; padding: 16px; border: var(--borde); background: var(--tinta); color: #fff; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--ok); outline-offset: 3px; }
+  #qr { display: grid; place-items: center; margin: 8px 0 12px; }
+  #qr img, #qr canvas { width: 100% !important; max-width: 300px; height: auto !important; image-rendering: pixelated; }
+  .estado { font-weight: 800; font-size: 28px; text-align: center; }
+  .sub { color: var(--gris); text-align: center; font-size: 14px; margin-top: 6px; word-break: break-all; }
+  .oculto { display: none; }
+  body.pagado main { box-shadow: 8px 8px 0 #0b5d3a; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cobrar con Velum</h1>
+  <section id="pedir">
+    <label class="importe"><input id="importe" inputmode="decimal" placeholder="0" aria-label="Importe en VEL" autofocus><span>VEL</span></label>
+    <input id="concepto" class="concepto" maxlength="64" placeholder="Concepto (opcional)" aria-label="Concepto">
+    <button id="cobrar">Cobrar</button>
+  </section>
+  <section id="cobro" class="oculto" aria-live="polite">
+    <div id="qr"></div>
+    <div class="estado" id="estado">Esperando el pago</div>
+    <div class="sub" id="detalle"></div>
+    <button id="otro">Nuevo cobro</button>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let vigila = null;
+$("cobrar").onclick = async () => {
+  const r = await fetch("/api/cobro", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: $("importe").value, label: $("concepto").value }) });
+  const j = await r.json();
+  if (!r.ok) { $("importe").focus(); alert(j.error); return; }
+  $("pedir").classList.add("oculto"); $("cobro").classList.remove("oculto");
+  $("qr").innerHTML = ""; new QRCode($("qr"), { text: j.uri, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.M });
+  $("estado").textContent = j.importe; $("detalle").textContent = "Escanea con la app de Velum";
+  vigila = setInterval(async () => {
+    const e = await (await fetch("/api/cobro/" + j.ref)).json();
+    if (e.estado === "incluido" || e.estado === "firme") {
+      document.body.classList.add("pagado");
+      $("qr").innerHTML = ""; $("estado").textContent = "Cobrado · " + j.importe;
+      $("detalle").textContent = e.estado === "firme" ? "Firme" : `En un bloque · firme en ~${Math.ceil((e.quedaMs ?? 0) / 1000)} s`;
+      if (e.estado === "firme") clearInterval(vigila);
+    } else if (e.estado === "caducada") { clearInterval(vigila); $("estado").textContent = "Caducado"; }
+  }, 1000);
+};
+$("otro").onclick = () => { clearInterval(vigila); document.body.classList.remove("pagado"); $("cobro").classList.add("oculto"); $("pedir").classList.remove("oculto"); $("importe").value = ""; $("importe").focus(); };
+</script>
+</body>
+</html>

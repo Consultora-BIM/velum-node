@@ -4,6 +4,7 @@
 // Así un nodo que reaplica desde génesis y uno que actualizó el binario en marcha llegan a la misma raíz.
 import { IS_MAINNET } from "./network";
 import type { ChainState } from "./state";
+import { migrateV4 } from "./era";
 
 export interface Upgrade {
   /** Versión de protocolo desde `height` (incluida). */
@@ -14,10 +15,30 @@ export interface Upgrade {
   migrate?: (s: ChainState) => void;
 }
 
-/** Mainnet: versión 1 desde génesis. Las siguientes se añaden aquí con su altura (aviso ≥ 14 días). */
-export const MAINNET_UPGRADES: readonly Upgrade[] = [{ version: 1, height: 0, name: "génesis velum-mainnet-1" }];
-/** Testnet v3: sin tabla (no lleva versión en la cabecera). */
-export const TESTNET_UPGRADES: readonly Upgrade[] = [{ version: 3, height: 0, name: "velum-testnet-3" }];
+/**
+ * Altura de activación de la economía v4 en velum-mainnet-1: primer cierre de época (múltiplo de 1.800) al menos 2 h
+ * después de publicar el nodo v2.1.0. Fijada el 2026-11-02: 28.800 (época 16), hacia las 12:05 UTC de ese día. Desde aquí: importes BigInt de 18 decimales, tope 21.000 M VEL, mitad cada 4 años,
+ * sin quema y créditos de mensajería (docs/economia-v4.md). Los bloques anteriores se aplican con las reglas v3 (era.ts).
+ */
+export const MAINNET_V4_HEIGHT = 28_800;
+
+/**
+ * SOLO PRUEBAS de punta a punta con una génesis de prueba: `VELUM_TEST_ONLY_V4_HEIGHT=1` adelanta la v4.
+ * Un nodo de la red real con esta variable se saldría solo de la cadena (sus bloques no valdrían para nadie).
+ */
+const testV4Height = (() => {
+  const v = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.VELUM_TEST_ONLY_V4_HEIGHT;
+  const n = v ? Number(v) : NaN;
+  return Number.isSafeInteger(n) && n >= 1 ? n : null;
+})();
+
+/** Mainnet: versión 1 desde génesis y v4 en MAINNET_V4_HEIGHT. Las siguientes se añaden aquí con su altura. */
+export const MAINNET_UPGRADES: readonly Upgrade[] = [
+  { version: 1, height: 0, name: "génesis velum-mainnet-1" },
+  { version: 4, height: testV4Height ?? MAINNET_V4_HEIGHT, name: "economía v4: 18 decimales, 21.000 M VEL, mitad cada 4 años, créditos", migrate: (s) => migrateV4(s) },
+];
+/** Testnet 4: economía v4 desde génesis (no lleva versión en la cabecera). */
+export const TESTNET_UPGRADES: readonly Upgrade[] = [{ version: 4, height: 0, name: "velum-testnet-4" }];
 
 let table: readonly Upgrade[] = IS_MAINNET ? MAINNET_UPGRADES : TESTNET_UPGRADES;
 

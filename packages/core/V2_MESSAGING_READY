@@ -1,0 +1,25 @@
+Velum v2 · mensajería lista (packages/core). Detalle: docs/protocolo-v2.md › «Cambios de interfaz (núcleo)».
+
+Cuenta
+  generatePhrase(lang) · validatePhrase(frase) · keysFromPhrase(frase) → { identity, wallet, mailboxBase }
+  createDevice(nombre) → DeviceKeys (guardar en Keychain, solo este dispositivo)
+  createAccount(keys, device) → VelumAccount { identity, wallet, mailboxBase, device, cert, deviceList }
+
+Cliente
+  const c = new VelumClient({ account, contacts: DeviceList[], url?: string|string[] })
+  c.connect() / c.close()
+  c.send(identidad, { kind:"text", body }) · c.sendGroup(grupo, miembros, {...}) · c.sendReceipt(id, refs, "read")
+  c.sendProfile(identidad) · c.broadcastProfile() · c.setContact(lista) · c.removeDevice(id) · c.maintain()
+  c.pay(to, amount, { token?, memo? }) · c.placeOrder(o) · c.createToken(o) · c.balance() · c.history() · c.faucet()
+  Vincular: A c.startLink() → evento link {frame} cada 2 s → {code} → c.confirmLink(blobs) → {done, list}
+            B new VelumClient({}) → c.joinLink(qr, nombre) → {code} → {done, account, blobs}
+  Eventos: status, message, incoming, progress, nodes, contact (guardar), account (guardar claves), link
+
+Nodo
+  shard.put: Shard v2 { id, msg, mailbox, stripe, idx, k, n, bucket, data, rh, mbAuth, exp }; id = shardId(msg, stripe, idx)
+  mailbox.open { mailboxes: MailboxOpen[] }: verifyOpenProof(m) y trozos con mailbox == m.mailbox && mbAuth == m.auth
+  receipt.submit { receipts: ReceiptV2[] }: checkReceiptProof(r) && r.rh == trozo.rh → borrar trozo
+
+Primitivas: hybridSeal/hybridOpen (pq.ts), sealMessage/openMessage/fanOutTargets (envelope.ts),
+  rsEncode/rsDecode (rs.ts), splitIntoShards/joinShards/padToBucket (shards.ts),
+  mailboxFor/mbAuthFor/openProof/verifyOpenProof (mailbox.ts), LinkHost/LinkGuest (link.ts).

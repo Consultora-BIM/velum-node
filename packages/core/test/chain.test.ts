@@ -1,4 +1,4 @@
-// Tests de la cadena v3: oferta limitada, comisiones sin quema (0 bajo 1.000 € con sello PoW), Reserva, tokens,
+// Tests de la cadena (economía v4: importes BigInt de 18 decimales): oferta limitada, comisiones sin quema (0 bajo 1.000 € con sello PoW), Reserva, tokens,
 // mercado, niveles por racha, fianza, reclamaciones con muestreo, oráculo TWAP, alias, conservación y determinismo.
 import { expect, test, describe } from "bun:test";
 import * as V from "../src";
@@ -8,7 +8,8 @@ const K = (t: string) => V.keyPairFromText(t);
 const faucet = V.faucetKeyPair();
 const alice = K("alice"), bob = K("bob"), carol = K("carol");
 const PAIR = "VEL/tEUR";
-const EUR = 1_000_000; // 1 tEUR (6 decimales)
+const EUR = 1_000_000; // precio: 1 € por VEL = 1.000.000 µEUR (los precios siguen siendo `number`)
+const EURt = 1_000_000n; // importe: 1 tEUR (6 decimales, BigInt)
 
 const nonceOf = (s: V.ChainState, a: string) => s.accounts[a]?.nonce ?? 0;
 /** Aplica una tx a un estado suelto (fuera de bloque) y exige que entre. */
@@ -17,8 +18,8 @@ function ok(s: V.ChainState, tx: V.Tx) {
   if (e) throw new Error(e);
 }
 function tokenTotal(s: V.ChainState, token: string) {
-  let t = 0;
-  for (const a of Object.keys(s.balances)) t += s.balances[a]![token] ?? 0;
+  let t = 0n;
+  for (const a of Object.keys(s.balances)) t += s.balances[a]![token] ?? 0n;
   return t;
 }
 function fresh() {
@@ -27,7 +28,7 @@ function fresh() {
   s.ts = V.GENESIS_TIME + 10_000;
   return s;
 }
-function fund(s: V.ChainState, to: string, vel: number, eur = 0) {
+function fund(s: V.ChainState, to: string, vel: bigint, eur = 0n) {
   if (vel) ok(s, V.makeTransfer(faucet.secret, faucet.address, to, vel, nonceOf(s, faucet.address), { ts: 1, ctx: s }));
   if (eur) ok(s, V.makeTransfer(faucet.secret, faucet.address, to, eur, nonceOf(s, faucet.address), { token: "tEUR", ts: 1, ctx: s }));
 }
@@ -38,78 +39,107 @@ function setPrices(s: V.ChainState, eur: number | null, usd: number | null = eur
 
 describe("oferta limitada", () => {
   test("constantes, puertas y génesis", () => {
-    expect(V.CHAIN_ID).toBe("velum-testnet-3");
-    expect(V.MAX_SUPPLY).toBe(1_000_000_000 * V.UNIT);
-    expect(V.R0).toBe(428_082_191);
+    expect(V.CHAIN_ID).toBe("velum-testnet-4");
+    expect(V.PROTOCOL_VERSION).toBe(4);
+    expect(V.UNIT).toBe(10n ** 18n);
+    expect(V.MAX_SUPPLY).toBe(21_000_000_000n * V.UNIT);
+    expect(V.GENESIS_RESERVE_SUPPLY).toBe(100_000_000n * V.UNIT);
+    expect(V.MINEABLE_SUPPLY).toBe(20_900_000_000n * V.UNIT);
+    expect(V.HALVING_EPOCHS).toBe(2_103_840); // 4 años de épocas de 1 min
+    expect(V.MAX_HALVINGS).toBe(33);
+    expect(V.R0).toBe(V.MINEABLE_SUPPLY / (2n * 2_103_840n));
     expect(V.GATEWAYS[0]).toBe("wss://velumprotocol.org/hub");
     expect(V.GATEWAYS[2]).toContain("workers.dev");
     expect(V.DEFAULT_GATEWAY).toBe(V.GATEWAYS[0]);
     const s = V.genesisState();
     for (const t of ["tEUR", "tUSD", "tUSDT"]) expect(V.balanceOf(s, faucet.address, t)).toBe(V.GENESIS_TOKEN_SUPPLY);
-    expect(V.velLedgerGap(s)).toBe(0);
+    expect(V.balanceOf(s, faucet.address)).toBe(V.GENESIS_RESERVE_SUPPLY);
+    expect(s.supply.minted).toBe(V.GENESIS_RESERVE_SUPPLY);
+    expect("burned" in s.supply).toBe(false); // sin quema
+    expect(V.velLedgerGap(s)).toBe(0n);
   });
 
-  test("70 años de épocas nunca superan el tope", () => {
-    const epochs = 70 * 525_600;
-    let minted = V.GENESIS_FAUCET_SUPPLY;
-    let e = 0;
-    while (e < epochs) {
-      const segEnd = Math.min(epochs, (Math.floor(e / V.HALVING_EPOCHS) + 1) * V.HALVING_EPOCHS);
-      minted += Math.min(V.emissionFor(e) * (segEnd - e), V.MAX_SUPPLY - minted);
+  test("33 mitades de emisión nunca superan el tope y a las 7 ya se ha descubierto ≥ 99 %", () => {
+    const H = BigInt(V.HALVING_EPOCHS);
+    let minted = V.GENESIS_RESERVE_SUPPLY;
+    for (let k = 0; k <= V.MAX_HALVINGS; k++) {
+      const e = k * V.HALVING_EPOCHS;
+      // La emisión es constante dentro de cada mitad: primera y última época iguales.
+      expect(V.emissionFor(e + V.HALVING_EPOCHS - 1)).toBe(V.emissionFor(e));
+      minted += V.emissionFor(e) * H;
       expect(minted).toBeLessThanOrEqual(V.MAX_SUPPLY);
-      e = segEnd;
+      if (k === 6) expect((minted - V.GENESIS_RESERVE_SUPPLY) * 100n).toBeGreaterThanOrEqual(V.MINEABLE_SUPPLY * 99n);
     }
-    expect(minted - V.GENESIS_FAUCET_SUPPLY).toBeGreaterThan(V.MINEABLE_SUPPLY - 60 * V.HALVING_EPOCHS);
-    expect(V.emissionFor(29 * V.HALVING_EPOCHS)).toBe(0);
-    expect(V.emissionFor(V.HALVING_EPOCHS)).toBe(Math.floor(V.R0 / 2));
+    // Lo que queda sin descubrir tras 33 mitades es la cola R0·H/2^32 (≈ 2,4 VEL) más el redondeo de cada mitad.
+    expect(V.MAX_SUPPLY - minted).toBeLessThan(((V.R0 * H) >> 32n) + 35n * H);
+    expect(V.emissionFor(0)).toBe(V.R0);
+    expect(V.emissionFor(V.HALVING_EPOCHS)).toBe(V.R0 / 2n);
+    expect(V.emissionFor(32 * V.HALVING_EPOCHS)).toBe(V.R0 >> 32n);
+    expect(V.emissionFor(32 * V.HALVING_EPOCHS)).toBeGreaterThan(0n);
+    expect(V.emissionFor(33 * V.HALVING_EPOCHS)).toBe(0n);
+    expect(V.emissionFor(100 * V.HALVING_EPOCHS)).toBe(0n);
   });
 });
 
 describe("comisiones v3: sin quema, 0 bajo 1.000 €, 1 pb desde 1.000 €", () => {
   test("reparto 80/20 exacto y sin quema", () => {
-    expect(V.splitFee(10_000)).toEqual({ pool: 8_000, reserve: 2_000 });
-    for (const f of [1, 7, 1001, 123_457]) { const p = V.splitFee(f); expect(p.pool + p.reserve).toBe(f); }
+    expect(V.splitFee(10_000n)).toEqual({ pool: 8_000n, reserve: 2_000n });
+    for (const f of [1n, 7n, 1001n, 123_457n, V.UNIT + 3n]) { const p = V.splitFee(f); expect(p.pool + p.reserve).toBe(f); }
   });
 
   test("umbral exacto de 1.000 € (VEL y tEUR) y sin precio no hay comisión", () => {
     const p = { eur: 2 * EUR, usd: 2_200_000, usdt: 2_200_000 }; // 2 € por VEL
-    expect(V.transferFee(p, V.VEL, 500 * V.UNIT)).toBe(50_000); // 1.000 € justos → 1 pb de 500 VEL
-    expect(V.transferFee(p, V.VEL, 500 * V.UNIT - 1)).toBe(0); // 999,999998 €
-    expect(V.transferFee(p, "tEUR", 1_000 * EUR)).toBe(50_000); // 1.000 tEUR = 500 VEL
-    expect(V.transferFee(p, "tEUR", 1_000 * EUR - 1)).toBe(0);
-    expect(V.transferFee(p, V.VEL, 5_000 * V.UNIT)).toBe(500_000); // 10.000 € → 0,5 VEL (1 €)
-    expect(V.transferFee(null, V.VEL, 1e15)).toBe(0); // «sin precio»
-    expect(V.transferFee(p, "RARO", 1e12)).toBe(0); // token sin precio
-    const q = V.quote(500 * V.UNIT, V.VEL, { oracle: p, powBits: 16 });
-    expect(q).toMatchObject({ fee: 50_000, receive: 500 * V.UNIT, totalVel: 500 * V.UNIT + 50_000, eur: 1_000 * EUR, usd: 1_100 * EUR, powBits: 0 });
-    expect(V.quote(10 * V.UNIT, V.VEL, { oracle: p, powBits: 17 })).toMatchObject({ fee: 0, eur: 20 * EUR, powBits: 17 });
+    const bp500 = (500n * V.UNIT) / 10_000n; // 1 pb de 500 VEL = 0,05 VEL
+    expect(V.transferFee(p, V.VEL, 500n * V.UNIT)).toBe(bp500); // 1.000 € justos → 1 pb de 500 VEL
+    expect(V.transferFee(p, V.VEL, 500n * V.UNIT - 1n)).toBe(0n); // 1 velo menos: < 1.000 €
+    expect(V.transferFee(p, "tEUR", 1_000n * EURt)).toBe(bp500); // 1.000 tEUR = 500 VEL
+    expect(V.transferFee(p, "tEUR", 1_000n * EURt - 1n)).toBe(0n);
+    expect(V.transferFee(p, V.VEL, 5_000n * V.UNIT)).toBe(V.UNIT / 2n); // 10.000 € → 0,5 VEL (1 €)
+    expect(V.transferFee(p, V.VEL, 1n)).toBe(0n);
+    expect(V.transferFee(null, V.VEL, 10n ** 33n)).toBe(0n); // «sin precio»
+    expect(V.transferFee(p, "RARO", 10n ** 30n)).toBe(0n); // token sin precio
+    const q = V.quote(500n * V.UNIT, V.VEL, { oracle: p, powBits: 16 });
+    expect(q).toMatchObject({ fee: bp500, receive: 500n * V.UNIT, totalVel: 500n * V.UNIT + bp500, eur: 1_000n * EURt, usd: 1_100n * EURt, powBits: 0 });
+    expect(V.quote(10n * V.UNIT, V.VEL, { oracle: p, powBits: 17 })).toMatchObject({ fee: 0n, eur: 20n * EURt, powBits: 17 });
+    // Texto decimal también vale; un `number` es un error a propósito (¿µVEL de la v3 o velos?).
+    expect(V.quote("500000000000000000000", V.VEL, { oracle: p, powBits: 16 }).fee).toBe(bp500);
+    expect(() => V.quote(500 as any, V.VEL, { oracle: p, powBits: 16 })).toThrow();
   });
 
   test("pago gratis con sello, pago grande con comisión → bolsa y Reserva, contabilidad cuadrada", () => {
     const s = fresh();
-    fund(s, alice.address, 2_000 * V.UNIT);
-    expect(s.supply.feesCollected).toBe(0); // sin precio: gratis
+    fund(s, alice.address, 2_000n * V.UNIT);
+    expect(s.supply.feesCollected).toBe(0n); // sin precio: gratis
     setPrices(s, 2 * EUR);
     // Pequeño: comisión 0, necesita sello
-    const small = V.makeTransfer(alice.secret, alice.address, bob.address, 10 * V.UNIT, 0, { ts: 1, ctx: s });
-    expect(small.fee).toBe(0);
+    const small = V.makeTransfer(alice.secret, alice.address, bob.address, 10n * V.UNIT, 0, { ts: 1, ctx: s });
+    expect(small.fee).toBe(0n);
     expect(V.powBits(small)).toBeGreaterThanOrEqual(16);
     const { pow: _p, sig: _s, ...noPow } = small;
     const unsealed = V.signTx(alice.secret, noPow as Omit<V.TransferTx, "sig">) as V.TransferTx;
     expect(V.applyTx(s, unsealed)).toContain("sello");
     ok(s, small);
     // Grande sin comisión: rechazado. Con la comisión que calcula la cartera: entra.
-    const cheat = V.makeTransfer(alice.secret, alice.address, bob.address, 600 * V.UNIT, 1, { ts: 1, ctx: s, fee: 0 });
+    const cheat = V.makeTransfer(alice.secret, alice.address, bob.address, 600n * V.UNIT, 1, { ts: 1, ctx: s, fee: 0n });
     expect(V.applyTx(s, cheat)).toContain("Comisión mínima");
-    const big = V.makeTransfer(alice.secret, alice.address, bob.address, 600 * V.UNIT, 1, { ts: 1, ctx: s });
-    expect(big.fee).toBe(60_000);
+    // Un importe `number` en una tx se rechaza (la red solo acepta texto decimal o BigInt).
+    expect(() => V.makeTransfer(alice.secret, alice.address, bob.address, 600 as any, 1, { ts: 1, ctx: s })).toThrow();
+    const asNumber = V.signTx(alice.secret, { type: "transfer", chain: V.CHAIN_ID, from: alice.address, to: bob.address, amount: 600, fee: 0, nonce: 1, ts: 1 } as any) as V.Tx;
+    expect(V.checkTx(asNumber)).toContain("Importe no válido");
+    expect(V.applyTx(s, asNumber)).toContain("Importe no válido");
+    const big = V.makeTransfer(alice.secret, alice.address, bob.address, 600n * V.UNIT, 1, { ts: 1, ctx: s });
+    expect(big.fee).toBe((600n * V.UNIT) / 10_000n);
     expect(big.pow).toBeUndefined();
-    ok(s, big);
-    expect(s.epoch.pool).toBe(48_000);
-    expect(V.balanceOf(s, V.RESERVE_ADDRESS)).toBe(12_000);
-    expect(s.supply.burned).toBe(0);
-    expect(V.balanceOf(s, V.BURN_ADDRESS)).toBe(0);
-    expect(V.velLedgerGap(s)).toBe(0);
+    // En JSON los importes van como texto decimal y así también entran.
+    const wire = JSON.parse(JSON.stringify(big));
+    expect(wire.amount).toBe("600000000000000000000");
+    expect(V.checkTx(wire)).toBeNull();
+    ok(s, wire);
+    expect(s.epoch.pool).toBe((48n * V.UNIT) / 1_000n); // 80 % de 0,06 VEL
+    expect(V.balanceOf(s, V.RESERVE_ADDRESS)).toBe((12n * V.UNIT) / 1_000n); // 20 %
+    expect("burned" in s.supply).toBe(false); // no hay quema ni cuenta de quema
+    expect((V as any).BURN_ADDRESS).toBeUndefined();
+    expect(V.velLedgerGap(s)).toBe(0n);
   });
 });
 
@@ -117,13 +147,13 @@ describe("prueba de trabajo", () => {
   test("validación: bits, ligada a la tx y a la firma", () => {
     expect(V.leadingZeroBits(new Uint8Array([0, 0, 0x10]))).toBe(19);
     expect(V.leadingZeroBits(new Uint8Array([0x80]))).toBe(0);
-    const body = { type: "transfer", chain: V.CHAIN_ID, from: alice.address, to: bob.address, amount: 5, fee: 0, nonce: 0, ts: 1 };
+    const body = { type: "transfer", chain: V.CHAIN_ID, from: alice.address, to: bob.address, amount: "5", fee: "0", nonce: 0, ts: 1 };
     const t0 = performance.now();
     const sealed = V.attachPow(body, 16);
     const ms = performance.now() - t0;
     console.log(`sello 16 bits: ${ms.toFixed(0)} ms (nonce ${sealed.pow})`);
     expect(V.powBits(sealed)).toBeGreaterThanOrEqual(16);
-    expect(V.powBits({ ...sealed, amount: 6 })).toBeLessThan(16 + 8); // otro cuerpo: el sello ya no sirve (casi seguro)
+    expect(V.powBits({ ...sealed, amount: "6" })).toBeLessThan(16 + 8); // otro cuerpo: el sello ya no sirve (casi seguro)
     expect(V.powBits({ ...sealed, pow: -1 })).toBe(0);
     expect(V.powBits({ ...sealed, sig: "x" })).toBe(V.powBits(sealed)); // la firma no entra en el sello
   });
@@ -135,7 +165,7 @@ describe("prueba de trabajo", () => {
     R.toEpochEnd();
     expect(R.s.pow).toMatchObject({ bits: 17, prev: 16, used: 0 });
     // Un sello de 16 bits aún vale una época (min(bits, prev)).
-    expect(V.powRequired(R.s, V.makeTransfer(alice.secret, alice.address, bob.address, 1, 0, { ts: 1 }))).toBe(16);
+    expect(V.powRequired(R.s, V.makeTransfer(alice.secret, alice.address, bob.address, 1n, 0, { ts: 1 }))).toBe(16);
     R.toEpochEnd(); // poca carga → baja
     expect(R.s.pow).toMatchObject({ bits: 16, prev: 17 });
     R.toEpochEnd();
@@ -146,39 +176,44 @@ describe("prueba de trabajo", () => {
 describe("tokens", () => {
   test("crear (100 VEL a la Reserva), emitir con sello y transferir", () => {
     const s = fresh();
-    fund(s, alice.address, 150 * V.UNIT);
-    const create = (sym: string, n: number) => V.makeTokenCreate(alice.secret, alice.address, n, { symbol: sym, name: "Puntos", decimals: 2, maxSupply: 1_000_000, initial: 1_000, mintable: true, ts: 1 });
+    fund(s, alice.address, 150n * V.UNIT);
+    const create = (sym: string, n: number) => V.makeTokenCreate(alice.secret, alice.address, n, { symbol: sym, name: "Puntos", decimals: 2, maxSupply: 1_000_000n, initial: "1000", mintable: true, ts: 1 });
     expect(V.applyTx(s, create("TUSDT", 0))).toBe("Símbolo ya existe");
     ok(s, create("PTS", 0));
-    expect(V.balanceOf(s, V.RESERVE_ADDRESS)).toBe(100 * V.UNIT);
-    expect(s.supply.reserveIn).toBe(100 * V.UNIT);
-    ok(s, V.makeTokenMint(alice.secret, alice.address, 1, "PTS", bob.address, 500, 1, s));
-    expect(s.tokens.PTS!.supply).toBe(1_500);
-    ok(s, V.makeTransfer(bob.secret, bob.address, carol.address, 100, 0, { token: "PTS", ts: 1, ctx: s })); // bob sin VEL: gratis
-    expect(V.balanceOf(s, carol.address, "PTS")).toBe(100);
+    expect(V.balanceOf(s, V.RESERVE_ADDRESS)).toBe(100n * V.UNIT);
+    expect(V.balanceOf(s, alice.address)).toBe(50n * V.UNIT);
+    expect(s.supply.reserveIn).toBe(100n * V.UNIT);
+    expect(s.tokens.PTS!.maxSupply).toBe(1_000_000n);
+    ok(s, V.makeTokenMint(alice.secret, alice.address, 1, "PTS", bob.address, 500n, 1, s));
+    expect(s.tokens.PTS!.supply).toBe(1_500n);
+    ok(s, V.makeTransfer(bob.secret, bob.address, carol.address, 100n, 0, { token: "PTS", ts: 1, ctx: s })); // bob sin VEL: gratis
+    expect(V.balanceOf(s, carol.address, "PTS")).toBe(100n);
     expect(tokenTotal(s, "PTS")).toBe(s.tokens.PTS!.supply);
-    expect(V.velLedgerGap(s)).toBe(0);
+    expect(V.velLedgerGap(s)).toBe(0n);
   });
 });
 
 describe("mercado", () => {
   test("cruce sin comisión bajo 1.000 €, con 1 pb desde 1.000 €, cancelación", () => {
     const s = fresh();
-    fund(s, alice.address, 2_000 * V.UNIT);
-    fund(s, bob.address, 0, 10_000 * EUR);
+    fund(s, alice.address, 2_000n * V.UNIT);
+    fund(s, bob.address, 0n, 10_000n * EURt);
     const eur0 = tokenTotal(s, "tEUR");
-    ok(s, V.makeOrder(alice.secret, alice.address, 0, { pair: PAIR, side: "sell", price: 2 * EUR, amount: 1_000 * V.UNIT, ts: 1, ctx: s }));
-    ok(s, V.makeOrder(bob.secret, bob.address, 0, { pair: PAIR, side: "buy", price: 2 * EUR, amount: 4 * V.UNIT, ts: 1, ctx: s }));
-    expect(V.balanceOf(s, bob.address)).toBe(4 * V.UNIT); // sin comisión
+    ok(s, V.makeOrder(alice.secret, alice.address, 0, { pair: PAIR, side: "sell", price: 2 * EUR, amount: 1_000n * V.UNIT, ts: 1, ctx: s }));
+    ok(s, V.makeOrder(bob.secret, bob.address, 0, { pair: PAIR, side: "buy", price: 2 * EUR, amount: 4n * V.UNIT, ts: 1, ctx: s }));
+    expect(V.balanceOf(s, bob.address)).toBe(4n * V.UNIT); // sin comisión
+    expect(V.balanceOf(s, alice.address, "tEUR")).toBe(8n * EURt); // 4 VEL × 2 € (quoteOf)
+    expect(V.quoteOf(4n * V.UNIT, 2 * EUR)).toBe(8n * EURt);
     setPrices(s, 2 * EUR);
-    ok(s, V.makeOrder(bob.secret, bob.address, 1, { pair: PAIR, side: "buy", price: 2 * EUR, amount: 600 * V.UNIT, ts: 1, ctx: s }));
-    expect(V.balanceOf(s, bob.address)).toBe(604 * V.UNIT - 60_000); // 1.200 € → 1 pb de 600 VEL
-    expect(s.epoch.pool + V.balanceOf(s, V.RESERVE_ADDRESS)).toBe(60_000);
+    ok(s, V.makeOrder(bob.secret, bob.address, 1, { pair: PAIR, side: "buy", price: 2 * EUR, amount: 600n * V.UNIT, ts: 1, ctx: s }));
+    const fee = (600n * V.UNIT) / 10_000n;
+    expect(V.balanceOf(s, bob.address)).toBe(604n * V.UNIT - fee); // 1.200 € → 1 pb de 600 VEL
+    expect(s.epoch.pool + V.balanceOf(s, V.RESERVE_ADDRESS)).toBe(fee);
     const ask = V.ordersOf(s, alice.address)[0]!;
     ok(s, V.makeCancel(alice.secret, alice.address, 1, ask.id, 1, s));
-    expect(V.balanceOf(s, V.ESCROW_ADDRESS)).toBe(0);
+    expect(V.balanceOf(s, V.ESCROW_ADDRESS)).toBe(0n);
     expect(tokenTotal(s, "tEUR")).toBe(eur0);
-    expect(V.velLedgerGap(s)).toBe(0);
+    expect(V.velLedgerGap(s)).toBe(0n);
     // sin sello no entra
     const raw = V.signTx(alice.secret, { type: "order.cancel", chain: V.CHAIN_ID, from: alice.address, nonce: 2, ts: 1, id: "o0" }) as V.Tx;
     expect(V.applyTx(s, raw)).toContain("sello");
@@ -207,7 +242,7 @@ describe("niveles por antigüedad continua", () => {
     const start = 20 * M;
     for (let e = start; e < start + 7 * M; e++) V.markPresent(late, e);
     expect(V.tierFor(late, start + 7 * M - 1).id).toBe("veterano");
-    expect(V.nodeWeight({ ...n, kind: "full", bond: 0 } as V.NodeInfo, 7 * M - 1)).toBe(200);
+    expect(V.nodeWeight({ ...n, kind: "full", bond: 0n } as V.NodeInfo, 7 * M - 1)).toBe(200);
   });
 
   test("la presencia exige 90/95/98 % y una ausencia > 48 h reinicia la racha", () => {
@@ -234,13 +269,13 @@ describe("niveles por antigüedad continua", () => {
     const s = V.genesisState();
     const vets = Array.from({ length: 10 }, (_, i) => `vet${i}`);
     const farm = Array.from({ length: 1000 }, (_, i) => `dc${i}`);
-    const pilar = { lastPresentEpoch: 9 * M, streakStart: 0, streakPresent: 9 * M + 1, kind: "full", bond: 0 } as V.NodeInfo;
-    const nuevo = { lastPresentEpoch: 9 * M, streakStart: 9 * M, streakPresent: 1, kind: "full", bond: 0 } as V.NodeInfo;
+    const pilar = { lastPresentEpoch: 9 * M, streakStart: 0, streakPresent: 9 * M + 1, kind: "full", bond: 0n } as V.NodeInfo;
+    const nuevo = { lastPresentEpoch: 9 * M, streakStart: 9 * M, streakPresent: 1, kind: "full", bond: 0n } as V.NodeInfo;
     const E = 9 * M;
     expect(V.nodeWeight(pilar, E)).toBe(200);
     expect(V.nodeWeight(nuevo, E)).toBe(100);
-    expect(V.nodeWeight({ ...pilar, bond: 10_000 * V.UNIT }, E)).toBe(400); // fianza ×2 (tope)
-    expect(V.nodeWeight({ ...pilar, bond: 50_000 * V.UNIT }, E)).toBe(400);
+    expect(V.nodeWeight({ ...pilar, bond: 10_000n * V.UNIT }, E)).toBe(400); // fianza ×2 (tope)
+    expect(V.nodeWeight({ ...pilar, bond: 50_000n * V.UNIT }, E)).toBe(400);
     const run = (ids: string[], inflate?: string) => {
       s.epochNodes[String(E)] = V.makeSnapshot(E, "b", ids.map((id) => ({ node: id, w: V.nodeWeight(id.startsWith("vet") ? pilar : nuevo, E) })));
       const snap = s.epochNodes[String(E)]!;
@@ -305,7 +340,7 @@ class Runner {
     const r = V.applyBlock(this.s, signed);
     if ("error" in r) throw new Error(r.error);
     expect(r.state.hash).toBe(state.hash);
-    expect(V.velLedgerGap(r.state)).toBe(0); // conservación en cada bloque
+    expect(V.velLedgerGap(r.state)).toBe(0n); // conservación en cada bloque
     this.s = r.state;
     this.blocks.push(signed);
     return signed;
@@ -423,30 +458,30 @@ describe("fianza", () => {
     const R = new Runner();
     const n = K("fianza-1");
     R.keys = [n];
-    R.step({ txs: [reg(n, 0), V.makeTransfer(faucet.secret, faucet.address, n.address, 20_000 * V.UNIT, 0, { ts: 1 })] });
-    R.step({ txs: [V.makeBond(n.secret, n.address, 1, 5_000 * V.UNIT, 1)] });
-    expect(R.s.nodes[n.address]!.bond).toBe(5_000 * V.UNIT);
-    expect(V.balanceOf(R.s, V.ESCROW_ADDRESS)).toBe(5_000 * V.UNIT);
+    R.step({ txs: [reg(n, 0), V.makeTransfer(faucet.secret, faucet.address, n.address, 20_000n * V.UNIT, 0, { ts: 1 })] });
+    R.step({ txs: [V.makeBond(n.secret, n.address, 1, 5_000n * V.UNIT, 1)] });
+    expect(R.s.nodes[n.address]!.bond).toBe(5_000n * V.UNIT);
+    expect(V.balanceOf(R.s, V.ESCROW_ADDRESS)).toBe(5_000n * V.UNIT);
     R.toEpochEnd();
     expect(V.currentSnapshot(R.s)!.nodes[0]!.w).toBe(2 * 75); // nuevo ×0,5 × fianza ×1,5
-    R.step({ txs: [V.makeUnbond(n.secret, n.address, 2, 2_000 * V.UNIT, 1), V.makeUnbond(n.secret, n.address, 3, 9_000 * V.UNIT, 1)] });
-    expect(R.s.nodes[n.address]!.bond).toBe(3_000 * V.UNIT);
+    R.step({ txs: [V.makeUnbond(n.secret, n.address, 2, 2_000n * V.UNIT, 1), V.makeUnbond(n.secret, n.address, 3, 9_000n * V.UNIT, 1)] });
+    expect(R.s.nodes[n.address]!.bond).toBe(3_000n * V.UNIT);
     const u = R.s.nodes[n.address]!.unbonding[0]!;
     expect(u.release).toBe(V.curEpoch(R.s) + V.BOND_UNBOND_EPOCHS);
     const before = V.balanceOf(R.s, n.address);
     R.toEpochEnd();
-    expect(V.balanceOf(R.s, V.ESCROW_ADDRESS)).toBe(5_000 * V.UNIT); // aún no (fianza + espera)
+    expect(V.balanceOf(R.s, V.ESCROW_ADDRESS)).toBe(5_000n * V.UNIT); // aún no (fianza + espera)
     R.s.nodes[n.address]!.unbonding[0]!.release = V.curEpoch({ height: R.s.height + 1 }); // atajo de test: «han pasado 14 días»
     R.toEpochEnd();
-    expect(V.balanceOf(R.s, n.address)).toBeGreaterThanOrEqual(before + 2_000 * V.UNIT);
+    expect(V.balanceOf(R.s, n.address)).toBeGreaterThanOrEqual(before + 2_000n * V.UNIT);
     expect(R.s.nodes[n.address]!.unbonding.length).toBe(0);
-    expect(V.balanceOf(R.s, V.ESCROW_ADDRESS)).toBe(3_000 * V.UNIT);
+    expect(V.balanceOf(R.s, V.ESCROW_ADDRESS)).toBe(3_000n * V.UNIT);
   });
 });
 
 describe("oráculo TWAP", () => {
   /** Simula `epochs` épocas con un precio fijo y algo de volumen por época. */
-  function feed(s: V.ChainState, from: number, epochs: number, prices: Record<string, number>, volPerEpoch = 100 * V.UNIT) {
+  function feed(s: V.ChainState, from: number, epochs: number, prices: Record<string, number>, volPerEpoch = 100n * V.UNIT) {
     for (let e = from; e < from + epochs; e++) {
       for (let b = 0; b < V.EPOCH_BLOCKS; b++) {
         for (const [pair, p] of Object.entries(prices)) s.dex.pairs[pair] = { last: p, hours: [] };
@@ -466,9 +501,9 @@ describe("oráculo TWAP", () => {
     // Una operación a 100× en un bloque (luego el mercado vuelve a 2 €).
     s.dex.pairs["VEL/tEUR"] = { last: 200 * EUR, hours: [] };
     V.oracleSample(s, 60);
-    V.oracleTrade(s, "VEL/tEUR", 50_000 * V.UNIT, 60);
+    V.oracleTrade(s, "VEL/tEUR", 50_000n * V.UNIT, 60);
     for (let b = 1; b < V.EPOCH_BLOCKS; b++) { s.dex.pairs["VEL/tEUR"] = { last: 2 * EUR, hours: [] }; V.oracleSample(s, 60); }
-    for (const p of ["VEL/tUSD", "VEL/tUSDT"]) { s.dex.pairs[p] = { last: 2_200_000, hours: [] }; for (let b = 0; b < V.EPOCH_BLOCKS; b++) V.oracleSample(s, 60); V.oracleTrade(s, p, 100 * V.UNIT, 60); }
+    for (const p of ["VEL/tUSD", "VEL/tUSDT"]) { s.dex.pairs[p] = { last: 2_200_000, hours: [] }; for (let b = 0; b < V.EPOCH_BLOCKS; b++) V.oracleSample(s, 60); V.oracleTrade(s, p, 100n * V.UNIT, 60); }
     V.oracleClose(s, 60);
     const moved = s.oracle.eur! / (2 * EUR) - 1;
     console.log(`operación a 100× durante 1 bloque: la TWAP se mueve ${(moved * 100).toFixed(2)} %`);
@@ -476,26 +511,26 @@ describe("oráculo TWAP", () => {
     // tUSDT sin volumen: precio cruzado (mediana de los otros convertidos).
     const t = V.genesisState();
     feed(t, 0, 60, { "VEL/tEUR": 2 * EUR, "VEL/tUSD": 2_200_000 });
-    feed(t, 60, 1, { "VEL/tUSDT": 9 * EUR }, 1); // par casi sin volumen: no cuenta
+    feed(t, 60, 1, { "VEL/tUSDT": 9 * EUR }, 1n); // par casi sin volumen: no cuenta
     expect(t.oracle.src.usdt).toBe("cross");
     expect(t.oracle.usdt).toBeCloseTo(2_200_000, -2);
     // Sin ningún par válido: sin precio.
     const u = V.genesisState();
-    feed(u, 0, 5, { "VEL/tEUR": 2 * EUR }, 10 * V.UNIT);
+    feed(u, 0, 5, { "VEL/tEUR": 2 * EUR }, 10n * V.UNIT);
     expect(u.oracle.eur).toBeNull();
     expect(V.valueOf(u.oracle, V.VEL, V.UNIT).eur).toBeNull();
   });
 
   test("las operaciones reales alimentan el oráculo bloque a bloque", () => {
     const R = new Runner();
-    R.step({ txs: [V.makeTransfer(faucet.secret, faucet.address, alice.address, 5_000 * V.UNIT, 0, { ts: 1 })] });
+    R.step({ txs: [V.makeTransfer(faucet.secret, faucet.address, alice.address, 5_000n * V.UNIT, 0, { ts: 1 })] });
     R.step({ txs: [
-      V.makeOrder(alice.secret, alice.address, 0, { pair: PAIR, side: "sell", price: 2 * EUR, amount: 3_000 * V.UNIT, ts: 1 }),
-      V.makeOrder(faucet.secret, faucet.address, 1, { pair: PAIR, side: "buy", price: 2 * EUR, amount: 1_500 * V.UNIT, ts: 1 }),
+      V.makeOrder(alice.secret, alice.address, 0, { pair: PAIR, side: "sell", price: 2 * EUR, amount: 3_000n * V.UNIT, ts: 1 }),
+      V.makeOrder(faucet.secret, faucet.address, 1, { pair: PAIR, side: "buy", price: 2 * EUR, amount: 1_500n * V.UNIT, ts: 1 }),
     ] });
     R.toEpochEnd();
     expect(R.s.oracle.eur).toBe(2 * EUR);
-    expect(R.s.oracle.volume.eur).toBe(1_500 * V.UNIT);
+    expect(R.s.oracle.volume.eur).toBe(1_500n * V.UNIT);
     expect(R.s.oracle.usd).toBe(Math.floor((2 * EUR * 1_000_000) / V.ORACLE_FX_EUR_PER_USD)); // cruzado con el cambio semilla
   });
 });
@@ -570,29 +605,31 @@ describe("determinismo y conservación", () => {
     let fn = 0;
     R.step({ txs: [reg(n1, 0), reg(n2, 0), reg(lite, 0, "light")] });
     R.step({ txs: [
-      V.makeTransfer(f.secret, f.address, alice.address, 3_000 * V.UNIT, fn++, { ts: 1 }),
-      V.makeTransfer(f.secret, f.address, bob.address, 5_000 * EUR, fn++, { token: "tEUR", ts: 1 }),
-      V.makePoolFund(f.secret, f.address, fn++, "tUSD", 90 * EUR, 3, 1),
-      V.makeTransfer(f.secret, f.address, n1.address, 100 * V.UNIT, fn++, { ts: 1 }),
+      V.makeTransfer(f.secret, f.address, alice.address, 3_000n * V.UNIT, fn++, { ts: 1 }),
+      V.makeTransfer(f.secret, f.address, bob.address, 5_000n * EURt, fn++, { token: "tEUR", ts: 1 }),
+      V.makePoolFund(f.secret, f.address, fn++, "tUSD", 90n * EURt, 3, 1),
+      V.makeTransfer(f.secret, f.address, n1.address, 100n * V.UNIT, fn++, { ts: 1 }),
     ] });
     R.step({ txs: [
-      V.makeTokenCreate(alice.secret, alice.address, 0, { symbol: "ZETA", name: "Zeta", decimals: 0, maxSupply: 1000, initial: 10, mintable: true, ts: 1 }),
-      V.makeOrder(alice.secret, alice.address, 1, { pair: PAIR, side: "sell", price: 2 * EUR, amount: 2_000 * V.UNIT, ts: 1 }),
-      V.makeOrder(bob.secret, bob.address, 0, { pair: PAIR, side: "buy", price: 3 * EUR, amount: 1_200 * V.UNIT, ts: 1 }),
-      V.makeBond(n1.secret, n1.address, 1, 50 * V.UNIT, 1),
+      V.makeTokenCreate(alice.secret, alice.address, 0, { symbol: "ZETA", name: "Zeta", decimals: 0, maxSupply: 1000n, initial: 10n, mintable: true, ts: 1 }),
+      V.makeOrder(alice.secret, alice.address, 1, { pair: PAIR, side: "sell", price: 2 * EUR, amount: 2_000n * V.UNIT, ts: 1 }),
+      V.makeOrder(bob.secret, bob.address, 0, { pair: PAIR, side: "buy", price: 3 * EUR, amount: 1_200n * V.UNIT, ts: 1 }),
+      V.makeBond(n1.secret, n1.address, 1, 50n * V.UNIT, 1),
     ] });
     for (let e = 0; e < 3; e++) R.toEpochEnd();
     expect(R.s.oracle.eur).toBe(2 * EUR);
     // Ya hay precio: un pago grande paga comisión, uno pequeño no.
     const ctx = V.feeContext(R.s);
     R.step({ txs: [
-      V.makeTransfer(alice.secret, alice.address, carol.address, 600 * V.UNIT, 2, { ts: 1, ctx }),
-      V.makeTransfer(alice.secret, alice.address, carol.address, 1 * V.UNIT, 3, { ts: 1, ctx }),
+      V.makeTransfer(alice.secret, alice.address, carol.address, 600n * V.UNIT, 2, { ts: 1, ctx }),
+      V.makeTransfer(alice.secret, alice.address, carol.address, 1n * V.UNIT, 3, { ts: 1, ctx }),
     ] });
-    expect(R.s.supply.feesCollected).toBe(100 * V.UNIT + 60_000);
+    expect(R.s.supply.feesCollected).toBe(100n * V.UNIT + (600n * V.UNIT) / 10_000n);
     R.toEpochEnd();
-    expect(V.supplyInfo(R.s).burned).toBe(0);
-    expect(V.supplyInfo(R.s).reserveOut).toBeGreaterThan(0); // la Reserva ya devuelve 0,1 %/época
+    const info = V.supplyInfo(R.s);
+    expect("burned" in info).toBe(false);
+    expect(info.circulating).toBe(info.minted); // sin quema: acuñado = en circulación
+    expect(info.reserveOut).toBeGreaterThan(0n); // la Reserva ya devuelve 0,1 %/época
     expect(R.s.supply.minted).toBeLessThanOrEqual(V.MAX_SUPPLY);
     const replay = () => {
       let s = V.genesisState();
@@ -619,7 +656,7 @@ describe("rendimiento", () => {
     const node = (address: string, kind: V.NodeKind): V.NodeInfo => ({
       address, name: "p", payout: address, version: "3", kind, registeredHeight: 0, registeredEpoch: 0, lastPresence: s0.height,
       epochsPresent: 1, lastPresentEpoch: 1, streakStart: 0, streakPresent: 2, shardsDelivered: 0, credits: 0, blocksProduced: 0,
-      earned: 0, tier: "nuevo", bond: 0, unbonding: [], claimsOk: 0, claimsVoid: 0,
+      earned: 0n, tier: "nuevo", bond: 0n, unbonding: [], claimsOk: 0, claimsVoid: 0,
     });
     s0.nodes[prop.address] = node(prop.address, "full");
     const t0 = performance.now();

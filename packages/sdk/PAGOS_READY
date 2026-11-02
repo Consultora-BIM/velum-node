@@ -1,0 +1,1 @@
+Pagos listos: payreq.ts (velum:pay, factura firmada, NDEF, firmeza) en el núcleo; createInvoice / parsePaymentURI / watchPayment en el SDK; TPV de ejemplo en examples/pos. HTLC (htlc.lock/claim/refund) en el núcleo, activación con la versión de protocolo 5 (altura pendiente). Docs: docs/pagos.md, docs/conseguir-vel.md, docs/intercambio-p2p.md.

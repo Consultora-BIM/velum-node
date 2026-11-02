@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Tarjeta de contacto v3 (binaria → base58: [ver 3][identidad 32][x25519 32][ML-KEM 1184][semilla buzón 32][mbPub 32][ts u64][firma 64], firma de 'velum/v3/card|' ‖ cuerpo), enlaces y tx name.register con sello de +4 bits.",
   "cases": [
     {
@@ -37,17 +37,17 @@
       "nameRegister": {
         "tx": {
           "type": "name.register",
-          "chain": "velum-testnet-3",
+          "chain": "velum-testnet-4",
           "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
           "nonce": 0,
           "ts": 1793494800000,
           "name": "alice.v3",
           "card": "5btQkn2b4TXC8fzXFv19Rum2LDpkVocEknyAPgCNyNC5q9KZHyivba3FTowsWay8dWHB82SuPPbqoru8SkxMNc8SgabCKKhUKn764TzL6gSzq8AFUap7LGvwuChSqvsAa6wSogRtLeKmpLiS2oUikHuyoF2jkqcHZS7Zfjn9vEA4GGxcKkgC5J23QazarexMddhEcNn69GPRRic333uscMAtRGjMhMCaqqFQyEQW8TiZXEpJkSt7NSneTwfeKtTznfHpkRXSVe13mFoszRGocYmAGhmXrxA4ozzjLYKoc78YEXyFnUzJgw3nDnvfNW53Wp7m2D5xaC8ffAdmU2fR6t5eHemsHmD7z9DAvxHBnfEmeZNQafva26t4q73LM3WT7FW9FiMdTiitWx6b3ZRhcjZLZcFogv1XgVK2t8rkNZzftAFULqvckUT19poM52pNugJnwioeSvsN7ypcfCjEDP4H4TGj5UqCsqFdTznELh3aj3gzWSvZ32dVHfH7u6KmLXoQ8tyN6vvgg1FY8KKTUVgLhfvCAe7JQ72ikbQQJEzj87KagZkW77QKvSMWtZFrjTq7L9HeZRWrrF3TUzvjjjut6DFkTEap3J5hRsNrPyEc4joDonSpLGeaqdHp53XKwPAT6PteXWy1SaVunf74vH3ynHbhg4GsV4KnMbYZzJVDtqh4AxCAe2Q5diMqSjQEzEU7nSz91btYvonpnUMaU3ZNwEJk8DVxZ5MbJmyVLG7FJNqLMBNxx7VfRJar2KUYsR6Kq8V34tjGbcKH4sUFHDBhP4nTd5ehdVwdRC9kZUTD22vnmJDqiqzfyqrcsnNBZb3JPw63XdTffVKwzBUgHHADWEh475CyWstx7aBtAe98Y16remAqh2TSsKoLRPqmp627NZCawcTgqtSjJHkvyjyzNqhKK6LXu5orAvGn5d9F4vgyxVAohyPHLV1LnYh5KT8pxjp1VzxL1edaVtL8G8EzUWk2aji7TziC5PzFiitBgjbcDyymHECQyhA3tvPxdP7LwnipAFhHi4PoDVT8QWTehtR1avkBiYxomyubHwN2hAuBFCZcTNvcvhaPRcgj83wU9BGbHu79KCwe7nWqGxuGb3uXLv5x6WNzRFw2XNfrtMiLegBviYVRSTvutqkMr54TKcwWayJsHAy81sv48bhejx9B22aou6VhekGS8zvMkrR7mqbpyaRSamHhmZ7yPtct5d9nu3YQFeB7fd7wfBp4JivBj6qT9woGpPbNJReSMfMibjbZL2JSVZ1kc2pfS1529iyQAhFWatTsrjpTYyNeMerZZqeYpPyanTCJe7VqVUWuMF7yBYpPRjPvNTfjWvXzT257dwbD7aY77sesy7anZJKgocv9dVwmGW5vxv78qRju1qC6gr2cRLCPRyyPv9eQ1dTE1LmYFphPzb7mY72WxhX4mSH7Bctx9YPt6w5Ni1wEjoVzbUUdvyuDTifGrDKCzgc3P7FQavgLQkdGXRMKeWpPG4CZ2Mj66WwwhoVU4eRCLjafrLbmYqF7qcjoEuRzEznL4ALhvkVcnruQjXvKMqvqssmmswUBexDNp87WeyQ2UnKdxbiakY8p16SKSJ5J2Gk67B3Fjw5m1KDkgTTydxrX79W4Z5qoa3qwN8ko8S5x3gBkgXoBpg5zvptA1MvBv4MJQutCsZPc1VXUdMDpbe2QwqK5er7gSnEVAL1RW8QmMBSAFAYARXC4r8inGxy138MXL1qApGG5MRnAifVJUh6H3uj93mRpwvq5r3qpzmxdDSb94Ra2ocWGY1jDNjQiF6ksBJQFS1Peomjz6wWbiKXos6dVsc5ZtYVazxi6k3tBnayw6Zaqx2kpMts5F6PuqMZNaTNQYMcbyYDLzrYFY3kLAMYZbqp",
-          "pow": 972632,
-          "sig": "6ea60f1b5d82bd9df4c0df628e1fac5bad1ab2066d0c0975c48c175121e7803fedf65c9820a3ac43dc5b030110c874ff056fd2428f68cc36b43e62653b5e7f0a"
+          "pow": 234026,
+          "sig": "5f7954815740d018638d4309fec69cdb05ac3250a7363c2ce40dee1582fba0a54ea3075a231c517f00305e4e93670c588a060bb0e9513e0abbfc47ebcec4990d"
         },
-        "txId": "036fb322968c017795edbb770bc6cd3c26d65cd8fbe0228a",
-        "powBits": 21,
+        "txId": "dc8a5ed8acc505950f0ef28ae44f2dd5edd102d62402f423",
+        "powBits": 20,
         "checkTx": null
       }
     }

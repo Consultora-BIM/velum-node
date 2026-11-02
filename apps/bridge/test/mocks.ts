@@ -113,8 +113,8 @@ export class MockVelum implements VelumPort {
     const txs = this.mempool.splice(0);
     for (const tx of txs) {
       this.nonces.set(tx.from, (this.nonces.get(tx.from) ?? 0) + 1);
-      if (tx.type === "bridge.mint") { this.refs.add(tx.ref); this.balances.set(tx.to, (this.balances.get(tx.to) ?? 0) + tx.amount); this.supply += tx.amount; }
-      if (tx.type === "bridge.redeem") { this.balances.set(tx.from, (this.balances.get(tx.from) ?? 0) - tx.amount); this.supply -= tx.amount; }
+      if (tx.type === "bridge.mint") { this.refs.add(tx.ref); const a = Number(BigInt(tx.amount)); this.balances.set(tx.to, (this.balances.get(tx.to) ?? 0) + a); this.supply += a; }
+      if (tx.type === "bridge.redeem") { const a = Number(BigInt(tx.amount)); this.balances.set(tx.from, (this.balances.get(tx.from) ?? 0) - a); this.supply -= a; }
     }
     this.blocksList.push({ height: this.blocksList.length, hash: "b" + this.blocksList.length, txs });
     for (let i = 0; i < extra; i++) this.blocksList.push({ height: this.blocksList.length, hash: "b" + this.blocksList.length, txs: [] });

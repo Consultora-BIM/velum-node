@@ -7,6 +7,7 @@ import type { Block, Presence, Tx } from "./tx";
 import type { Shard } from "./shards";
 import type { ReceiptV2 } from "./proof";
 import type { MailboxOpen } from "./mailbox";
+import type { RatePass } from "./quota";
 import type { NodeKind } from "./constants";
 import type { EpochSnapshot } from "./lottery";
 
@@ -93,7 +94,7 @@ export type HubToClient =
   | { t: "pong" };
 
 export type HubToWatch =
-  | { t: "snapshot"; head: { height: number; hash: string } | null; nodes: PeerInfo[]; stats: Record<string, number> }
+  | { t: "snapshot"; head: { height: number; hash: string } | null; nodes: PeerInfo[]; stats: Record<string, number | string> }
   | { t: "block"; block: Block }
   | { t: "nodes"; nodes: PeerInfo[] }
   /**
@@ -107,16 +108,19 @@ export type HubToWatch =
 export type PushEvent = "shard" | "head";
 
 // ---------- Métodos RPC del nodo ----------
+/** Importe en JSON (v4): texto decimal en unidades mínimas (velos para VEL). Pásalo a BigInt con `toAmount`. */
+export type AmountText = string;
+
 export interface RpcMap {
   "chain.head": { params: {}; result: { height: number; hash: string; ts: number; node: string } };
   "chain.block": { params: { height?: number; hash?: string }; result: Block | null };
   "chain.blocks": { params: { from: number; to: number }; result: Block[] };
-  "account.get": { params: { address: string }; result: { balance: number; nonce: number; pending: number } };
+  "account.get": { params: { address: string }; result: { balance: AmountText; nonce: number; pending: number } };
   "account.history": { params: { address: string; limit?: number }; result: { height: number; ts: number; tx: Tx }[] };
   "tx.submit": { params: { tx: Tx }; result: { id: string } };
-  "faucet": { params: { address: string }; result: { id: string; amount: number } };
+  "faucet": { params: { address: string }; result: { id: string; amount: AmountText } };
   /** Entrega un fragmento v2 al nodo (este nodo pasa a ser el "carrier"). Lleva `rh` y `mbAuth`. */
-  "shard.put": { params: { shard: Shard }; result: { ok: true; carrier: string } };
+  "shard.put": { params: { shard: Shard; pass?: RatePass }; result: { ok: true; carrier: string } };
   /**
    * Abre buzones sin decir quién es (§5): por cada uno, firma ed25519 de `velum/v2/open|<mailbox>|<ts>`
    * verificable con `auth` (= `mbAuth` de sus trozos). El nodo devuelve los trozos de ese buzón con
@@ -125,10 +129,10 @@ export interface RpcMap {
   "mailbox.open": { params: { mailboxes: MailboxOpen[] }; result: { shards: (Shard & { carrier: string })[]; courier: string } };
   /** Recibos anónimos (§4): sin firma; válidos si `sha512(secret) == rh`. */
   "receipt.submit": { params: { receipts: ReceiptV2[] }; result: { accepted: number } };
-  "node.info": { params: {}; result: { address: string; name: string; payout: string; version: string; height: number; peers: number; tier: string; earned: number; uptime: number } };
+  "node.info": { params: {}; result: { address: string; name: string; payout: string; version: string; height: number; peers: number; tier: string; earned: AmountText; uptime: number } };
   "node.list": { params: {}; result: any[] };
   "node.get": { params: { address: string }; result: any | null };
-  "stats": { params: {}; result: Record<string, number> };
+  "stats": { params: {}; result: Record<string, number | string> };
   /** Foto del sorteo de rutas (la última, o la de `epoch` si aún se guarda). */
   "chain.epoch": { params: { epoch?: number }; result: EpochInfo | null };
   "token.info": { params: { symbol: string }; result: any | null };
@@ -136,7 +140,9 @@ export interface RpcMap {
   /** Libro `VEL/<token>`: profundidad, último precio y volumen 24 h. */
   "market.book": { params: { pair: string; levels?: number }; result: any };
   "market.trades": { params: { pair?: string; limit?: number }; result: any[] };
-  "account.balances": { params: { address: string }; result: Record<string, number> };
+  "account.balances": { params: { address: string }; result: Record<string, AmountText> };
+  /** v4: créditos de mensajería comprados para una dirección (`credits.buy`). */
+  "credits.of": { params: { address: string }; result: { address: string; credits: number } };
   "account.orders": { params: { address: string }; result: any[] };
   "supply": { params: {}; result: any };
   /** v3: contexto de comisiones (oráculo + bits del sello PoW) para construir transacciones (`FeeContext`). */

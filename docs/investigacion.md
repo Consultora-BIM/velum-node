@@ -1,5 +1,20 @@
 # Velum — Dossier de investigación y diseño del protocolo
 
+## Corrección (1 de noviembre de 2026): la quema quedó descartada
+
+Este dossier se escribió para el MVP. **Sus recomendaciones de quema quedan superadas por decisión del propietario.** Ya no aplican la quema del 50 % de las comisiones, la comisión fija de 0,001 VEL, los créditos de empresa que queman VEL ni la tesorería.
+
+Lo vigente:
+
+- **VEL nunca se destruye.** Ninguna regla, comisión ni operación quema moneda.
+- **Comisiones:** 0 por debajo de 1.000 € (con sello de trabajo); 0,01 % desde ahí. 80 % para los nodos que abren puentes y 20 % a la Reserva de la Red.
+- **Economía v4:** tope de 21.000 M VEL, 18 decimales, mitad cada 4 años con épocas de 1 hora. Los créditos de mensajes de empresas van enteros a los nodos.
+- La red principal `velum-mainnet-1` está en marcha. Las menciones a la red de pruebas de este documento son históricas.
+
+Manda lo que dicen [`economia-v4.md`](./economia-v4.md) y [`protocolo-v3.md`](./protocolo-v3.md). El resto del dossier se conserva como registro de la investigación.
+
+---
+
 > **Proyecto:** Velum, de Consultora BIM.
 > **Qué es:** un mensajero anónimo y cifrado de extremo a extremo. Su transporte y sus incentivos viven en una red propia con moneda propia, **VEL**.
 > **Fecha:** 1 de noviembre de 2026. **Estado:** documento de trabajo para el MVP en testnet.

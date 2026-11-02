@@ -1,5 +1,5 @@
 // Gestor de la cadena: guarda bloques, elige la mejor rama (más larga; a igual altura, menor hash) y reorganiza.
-import { applyBlock, betterHead, genesisState, slotOf, type Block, type ChainState, type Receipt, type Tx, txId, receiptId } from "@velum/core";
+import { applyBlock, betterHead, genesisState, protocolAt, slotOf, type Block, type ChainState, type Receipt, type Tx, txId, receiptId } from "@velum/core";
 import type { Store } from "./store";
 
 /** Estados recientes que guardamos en memoria (por hash de bloque) para reorganizar sin recalcular. */
@@ -51,6 +51,12 @@ export class Chain {
       this.rebuildFromMain();
       return;
     }
+    // La cabeza guardada debe llevar la versión de protocolo que este binario espera a esa altura. Si no, la altura
+    // de una actualización (p. ej. la v4) ya pasó en la red con las reglas viejas: arrancar rompería la cadena.
+    const pv = head?.header.pv;
+    if (head && typeof pv === "number" && pv !== protocolAt(head.header.height)) {
+      throw new Error(`El bloque ${head.header.height} es de protocolo v${pv} y este binario espera v${protocolAt(head.header.height)} a esa altura: la altura de activación ya pasó. No arranques este binario en esta red.`);
+    }
     this.state = saved;
     this.head = head;
     this.remember(saved);
@@ -63,7 +69,9 @@ export class Chain {
       const b = this.store.mainBlock(h);
       if (!b) break;
       const r = applyBlock(s, b);
-      if ("error" in r) break;
+      // Nunca se trunca la cadena principal: si un bloque guardado ya no entra (p. ej. una altura de
+      // actualización que no coincide con la red), el nodo se para y la base queda intacta.
+      if ("error" in r) throw new Error(`No se puede reconstruir la cadena en el bloque ${h}: ${r.error}. La base no se ha tocado.`);
       s = r.state;
       head = b;
       this.remember(s);

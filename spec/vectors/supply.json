@@ -1,0 +1,76 @@
+{
+  "protocol": 4,
+  "chain": "velum-testnet-4",
+  "description": "Oferta v4: tope 21.000 M VEL; R(e) = floor(R0 / 2^k), k = floor(e / HALVING_EPOCHS) < 33, si no 0. Mainnet: épocas de 1 h, HALVING_EPOCHS = 35.064, R0 = floor(20.900 M VEL / (2 × 35.064)). Migración v3→v4 de la mainnet en la altura de activación: importes VEL × 10^12 (µVEL → velos); los de otros tokens no cambian; se quita supply.burned.",
+  "cases": [
+    {
+      "mainnet": {
+        "halvingEpochs": "35064",
+        "maxHalvings": 33,
+        "r0": "298026465890942276979237",
+        "emission": [
+          [
+            "0",
+            "298026465890942276979237"
+          ],
+          [
+            "35063",
+            "298026465890942276979237"
+          ],
+          [
+            "35064",
+            "149013232945471138489618"
+          ],
+          [
+            "245448",
+            "2328331764772986538900"
+          ],
+          [
+            "1157111",
+            "69389693879276"
+          ],
+          [
+            "1157112",
+            "0"
+          ]
+        ],
+        "totalAfter33Halvings": "20999999997566919773816472712",
+        "neverMined": "2433080226183527288"
+      }
+    },
+    {
+      "testnet": {
+        "halvingEpochs": 2103840,
+        "r0": "4967107764849037949653",
+        "emission0": "4967107764849037949653"
+      }
+    },
+    {
+      "migration": {
+        "factor": "1000000000000",
+        "examples": [
+          {
+            "v3": 1,
+            "token": "VEL",
+            "v4": "1000000000000"
+          },
+          {
+            "v3": 25684931506,
+            "token": "VEL",
+            "v4": "25684931506000000000000"
+          },
+          {
+            "v3": 100000000000000,
+            "token": "VEL",
+            "v4": "100000000000000000000000000"
+          },
+          {
+            "v3": 75000000,
+            "token": "vUSDT",
+            "v4": "75000000"
+          }
+        ]
+      }
+    }
+  ]
+}

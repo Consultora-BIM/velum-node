@@ -1,5 +1,6 @@
 // Vigilante de depósitos para exchanges: una dirección caliente y un `memo` por cliente (como XRP o Stellar),
 // o una dirección por cliente. Emite cada pago entrante cuando tiene `confirmations` bloques encima.
+import { txView } from "@velum/core";
 import { txHash } from "./tx";
 import type { BlockLite } from "./rpc";
 
@@ -8,8 +9,8 @@ export interface DepositEvent {
   height: number;
   from: string;
   to: string;
-  /** Unidades mínimas (µVEL o del token). */
-  amount: number;
+  /** Unidades mínimas (velos o del token), BigInt. Las tx anteriores a la v4 de mainnet ya vienen convertidas a velos. */
+  amount: bigint;
   token: string;
   memo?: string;
 }
@@ -53,7 +54,7 @@ export class DepositWatcher {
           if (tx?.type !== "transfer" || !this.to.has(tx.to)) continue;
           const token = tx.token ?? "VEL";
           if (this.o.tokens && !this.o.tokens.includes(token)) continue;
-          out.push({ txId: txHash(tx), height: b.height, from: tx.from, to: tx.to, amount: tx.amount, token, memo: tx.memo });
+          out.push({ txId: txHash(tx), height: b.height, from: tx.from, to: tx.to, amount: BigInt(txView(tx).amount), token, memo: tx.memo });
         }
       }
       this.cursor = to;

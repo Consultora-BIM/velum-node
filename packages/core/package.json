@@ -19,7 +19,7 @@
   },
   "scripts": {
     "test": "bun test",
-    "test:mainnet": "VELUM_NETWORK=mainnet bun test test/mainnet.test.ts test/upgrades.test.ts",
+    "test:mainnet": "VELUM_NETWORK=mainnet bun test test/mainnet.test.ts test/upgrades.test.ts test/v4.test.ts",
     "genesis": "bun scripts/genesis-mainnet.ts"
   }
 }

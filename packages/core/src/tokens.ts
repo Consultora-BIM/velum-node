@@ -1,5 +1,5 @@
 // Tokens propios en la red (protocolo-v2 §8). Las comisiones se pagan siempre en VEL.
-import { BRIDGE_TOKEN, TOKEN_CREATE_FEE, TOKEN_SYMBOL_RE, VEL } from "./constants";
+import { BRIDGE_TOKEN, TOKEN_CREATE_FEE, TOKEN_SYMBOL_RE, VEL, VEL_DECIMALS } from "./constants";
 import type { TokenCreateTx, TokenMintTx } from "./tx";
 import { type ChainState, balanceOf, chargeFee, chargeToReserve, credit } from "./state";
 
@@ -7,9 +7,9 @@ export interface TokenInfo {
   symbol: string;
   name: string;
   decimals: number;
-  maxSupply: number;
-  /** Unidades emitidas hasta ahora. */
-  supply: number;
+  maxSupply: bigint;
+  /** Unidades emitidas hasta ahora (BigInt; texto decimal en JSON). */
+  supply: bigint;
   issuer: string;
   mintable: boolean;
   createdHeight: number;
@@ -26,7 +26,7 @@ export const GENESIS_TOKENS = [
   { symbol: "tUSDT", name: "Tether de prueba (testnet, sin valor)" },
 ] as const;
 export const GENESIS_TOKEN_DECIMALS = 6;
-export const GENESIS_TOKEN_SUPPLY = 1_000_000_000 * 10 ** GENESIS_TOKEN_DECIMALS;
+export const GENESIS_TOKEN_SUPPLY: bigint = 1_000_000_000n * 10n ** BigInt(GENESIS_TOKEN_DECIMALS);
 
 export function genesisTokens(faucet: string): TokenInfo[] {
   return GENESIS_TOKENS.map((t) => ({
@@ -38,7 +38,7 @@ export function genesisTokens(faucet: string): TokenInfo[] {
 /** Token envuelto de la pasarela (mainnet): 6 decimales, suministro 0, emisor = autoridad de la pasarela. */
 export function bridgeToken(authority: string): TokenInfo {
   return {
-    symbol: BRIDGE_TOKEN, name: "Tether USD envuelto (1:1, pasarela Velum)", decimals: 6, maxSupply: Number.MAX_SAFE_INTEGER, supply: 0,
+    symbol: BRIDGE_TOKEN, name: "Tether USD envuelto (1:1, pasarela Velum)", decimals: 6, maxSupply: BigInt(Number.MAX_SAFE_INTEGER), supply: 0n,
     issuer: authority, mintable: false, createdHeight: 0, bridge: true,
   };
 }
@@ -78,5 +78,5 @@ export function applyTokenMint(s: ChainState, tx: TokenMintTx): string | null {
   return null;
 }
 
-/** Decimales de un token (VEL = 6). */
-export const decimalsOf = (s: ChainState | null, token: string) => (token === VEL ? 6 : s?.tokens[token]?.decimals ?? 6);
+/** Decimales de un token (VEL = 18 desde la v4). */
+export const decimalsOf = (s: ChainState | null, token: string) => (token === VEL ? VEL_DECIMALS : s?.tokens[token]?.decimals ?? 6);

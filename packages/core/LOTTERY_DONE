@@ -1,0 +1,23 @@
+Velum · sorteo público de rutas + nodo ligero listos en packages/core (agente nodo/puerta).
+bun test packages: 43 pass, 0 fail.
+
+A partir de aquí este agente NO toca src/{state,tx,constants,wallet,dex,tokens}.ts.
+Sigue siendo suyo: src/lottery.ts, src/lightnode.ts (y hubrouter.ts, wire.ts/client.ts solo en lo de rutas).
+
+Qué cambió en el núcleo
+  lottery.ts    EpochSnapshot { epoch, beacon, nodes[{node,w}], total } · makeSnapshot · assignedNode(snap, shardId, "carrier"|"courier")
+                lotteryRoute · lotteryCandidates (3 por trozo, v3 §3; el 0 = assignedNode) · peso completo 2, ligero 1
+  state.ts      ChainState.epochNodes (fotos por época; baliza = hash del último bloque de la época anterior;
+                nodos dados de alta antes del inicio y con señal de vida en 300 bloques; se guardan 16 épocas)
+                lotteryCredit(s, r): cada papel paga SIEMPRE al sorteado (candidato 0) si el recibo lo nombra
+                o si está presente (PRESENCE_WINDOW). Neutral: inventar tráfico no sube tu parte.
+                checkReceipt rechaza recibos que no pagan a nadie. currentSnapshot(s), snapshotFor(s, ep).
+  proof.ts      ReceiptV2.ep? (época de la foto) · shards.ts Shard.ep? + shardProblem(s) (validación v2)
+  wire.ts       NodeHello/PeerInfo.kind · EpochInfo · LIGHT_METHODS · DirectRpc · HubToNode head/epoch ·
+                HubToWatch "traffic" (agregado por segundo y nodo; "flow" obsoleto) · RPC nuevas
+  client.ts     enruta cada trozo al carrier sorteado (si está en línea) y paga al courier sorteado; refreshEpoch()
+  hubrouter.ts  puerta mínima en memoria (pruebas y devhub)
+  lightnode.ts  LightNode + LightStore/MemoryLightStore
+
+TODO para «cadena v3» (lottery.ts › lotteryCandidates): pasar el crédito a «quien lo llevó si está entre
+los 3 candidatos» + tope esperado×1,5 + work.claim con muestreo; entonces el cliente elige por latencia.

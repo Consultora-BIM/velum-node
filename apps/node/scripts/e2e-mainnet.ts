@@ -4,6 +4,8 @@
 // de protocolo), pagos desde la reserva, staking delegado por RPC, pasarela vUSDT (cerrada en un nodo, abierta con
 // cadenas simuladas en otro), canje, y arranque desde una foto de estado con la raíz comprobada.
 process.env.VELUM_NETWORK = "mainnet";
+// Economía v4 desde el bloque 1 (solo pruebas): la tabla real la activa en MAINNET_V4_HEIGHT.
+process.env.VELUM_TEST_ONLY_V4_HEIGHT = "1";
 import { mkdtempSync, rmSync, openSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -127,7 +129,7 @@ async function run() {
 
   await check("génesis: 100 M VEL en la cartera fría, solo vUSDT, sin grifo", async () => {
     const b = await call(0, "account.balances", { address: cold.velum.address });
-    if (b.VEL !== V.GENESIS_RESERVE_SUPPLY) throw new Error(JSON.stringify(b));
+    if (b.VEL !== String(V.GENESIS_RESERVE_SUPPLY)) throw new Error(JSON.stringify(b));
     const toks = (await call(0, "token.list")).map((t: any) => t.symbol);
     if (JSON.stringify(toks) !== '["vUSDT"]') throw new Error(`tokens: ${toks}`);
     const e = await call(0, "faucet", { address: cold.velum.address }).then(() => null, (x: Error) => x.message);
@@ -147,26 +149,26 @@ async function run() {
 
   const alice = V.walletFromSeed(V.seedFromPhrase(V.generatePhrase()), 0);
   await check("pago desde la reserva (comisión 0 con sello bajo el umbral)", async () => {
-    const tx = V.makeTransfer(coldKey.secret, coldKey.address, alice.address, 20_000 * V.UNIT, await nonce(coldKey.address), { ctx: await fees() });
-    if (tx.fee !== 0 || tx.pow === undefined) throw new Error("se esperaba comisión 0 con sello");
+    const tx = V.makeTransfer(coldKey.secret, coldKey.address, alice.address, 20_000n * V.UNIT, await nonce(coldKey.address), { ctx: await fees() });
+    if (tx.fee !== 0n || tx.pow === undefined) throw new Error("se esperaba comisión 0 con sello");
     await call(0, "tx.submit", { tx });
     await settle([coldKey.address]);
     const b = await call(0, "account.balances", { address: alice.address });
-    if (b.VEL !== 20_000 * V.UNIT) throw new Error(JSON.stringify(b));
+    if (b.VEL !== String(20_000n * V.UNIT)) throw new Error(JSON.stringify(b));
     return "20.000 VEL a alice";
   });
 
   const n1 = (await status(0)).address as string;
   await check("staking: delegar por RPC y verlo por nodo y por dirección", async () => {
     const ctx = await fees();
-    const body = { type: "stake.delegate", chain: V.CHAIN_ID, from: alice.address, nonce: await nonce(alice.address), ts: Date.now(), node: n1, amount: 5_000 * V.UNIT };
+    const body = { type: "stake.delegate", chain: V.CHAIN_ID, from: alice.address, nonce: await nonce(alice.address), ts: Date.now(), node: n1, amount: 5_000n * V.UNIT };
     await call(0, "tx.submit", { tx: V.signTx(alice.secret, V.attachPow(body, ctx.powBits) as any) });
     await settle([alice.address]);
     const byNode = await call(1, "stake.delegations", { node: n1 });
     const byAddr = await call(2, "stake.delegations", { address: alice.address });
-    if (byNode[0]?.amount !== 5_000 * V.UNIT || byAddr.delegations[0]?.node !== n1) throw new Error(JSON.stringify({ byNode, byAddr }));
+    if (byNode[0]?.amount !== String(5_000n * V.UNIT) || byAddr.delegations[0]?.node !== n1) throw new Error(JSON.stringify({ byNode, byAddr }));
     const node = await call(0, "node.get", { address: n1 });
-    return `delegado ${node.delegated / V.UNIT} VEL en ${n1.slice(0, 7)}…`;
+    return `delegado ${V.formatAmount("VEL", node.delegated)} en ${n1.slice(0, 7)}…`;
   });
 
   await check("pasarela: cerrada en un nodo sin pasarela, abierta con cadenas simuladas en otro", async () => {
@@ -180,16 +182,16 @@ async function run() {
     tronMock.mine(25);
     await bridge.pollDeposits("tron");
     await bridge.mintPending();
-    await waitFor("vUSDT acuñado", async () => (await call(0, "account.balances", { address: alice.address })).vUSDT === 75 * V.UNIT, 30_000);
+    await waitFor("vUSDT acuñado", async () => (await call(0, "account.balances", { address: alice.address })).vUSDT === String(75n * 1_000_000n), 30_000);
     // Canje de 30 vUSDT a TRON → la pasarela lo encola.
     const ctx = await fees();
-    const body = { type: "bridge.redeem", chain: V.CHAIN_ID, from: alice.address, nonce: await nonce(alice.address), ts: Date.now(), dst: "tron", to: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", amount: 30 * V.UNIT, fee: 0 };
+    const body = { type: "bridge.redeem", chain: V.CHAIN_ID, from: alice.address, nonce: await nonce(alice.address), ts: Date.now(), dst: "tron", to: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", amount: 30n * 1_000_000n, fee: 0n };
     await call(0, "tx.submit", { tx: V.signTx(alice.secret, V.attachPow(body, ctx.powBits) as any) });
     await settle([alice.address]);
     await waitFor("canje visto por la pasarela", async () => { await Bun.sleep(2_500); await bridge.pollVelum(); return Object.values(bridge.store.data.withdrawals).some((w) => w.status === "queued"); }, 30_000, 100);
     tronMock.setBalance(addr.address, 75n * 1_000_000n);
     const r = await bridge.reserves();
-    if (r.supply !== String(45 * V.UNIT) || !r.ok) throw new Error(JSON.stringify(r));
+    if (r.supply !== String(45n * 1_000_000n) || !r.ok) throw new Error(JSON.stringify(r));
     return `75 depositados, 30 canjeados, reservas ok (${r.reserves} ≥ ${r.liabilities})`;
   });
 
@@ -203,7 +205,7 @@ async function run() {
     if (imp.exitCode !== 0) throw new Error(imp.stderr.toString() || imp.stdout.toString());
     // Foto alterada: se rechaza.
     const bad = JSON.parse(await Bun.file(file).text());
-    bad.state.balances[cold.velum.address].VEL += 1;
+    bad.state.balances[cold.velum.address].VEL = String(BigInt(bad.state.balances[cold.velum.address].VEL) + 1n);
     writeFileSync(join(ROOT, "mala.json"), JSON.stringify(bad));
     const rej = Bun.spawnSync(["bun", MAIN, "snapshot", "import", join(ROOT, "mala.json")], { env: { ...process.env, VELUM_NETWORK: "mainnet", VELUM_GENESIS_FILE: GEN_FILE, VELUM_HOME: join(ROOT, "n3c") } });
     if (rej.exitCode === 0) throw new Error("aceptó una foto alterada");

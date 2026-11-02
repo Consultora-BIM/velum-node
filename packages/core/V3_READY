@@ -1,0 +1,40 @@
+Velum v3 — cadena (economía + identidad) lista en packages/core. CHAIN_ID velum-testnet-3 · PROTOCOL_VERSION 3.
+Detalle normativo: docs/protocolo-v3.md › «Notas de implementación (cadena v3)». Vectores: spec/vectors (bun packages/core/scripts/vectors.ts [--check]).
+
+constants.ts  GATEWAYS [velumprotocol.org, velum.consultorabim.com, workers.dev] · PUBLIC_ORIGIN https://velumprotocol.org
+              FEE_FREE_EUR (1.000 €) · FEE_BP 1 · FEE_SPLIT_BP {pool 8000, reserve 2000} · RESERVE_ADDRESS vel_reserve · RESERVE_RELEASE_BP 10
+              TIERS nuevo/activo/veterano/pilar (5000/6500/8500/10000 pb) · pillarMonths · STREAK_GAP_EPOCHS · MONTH_EPOCHS · EPOCHS_PER_DAY
+              BOND_CAP 10.000 VEL · BOND_UNBOND_EPOCHS (14 d) · CLAIM_* · POW_MIN/MAX_BITS 16/26 · NAME_POW_EXTRA_BITS 4 · ORACLE_* · NAME_RE · REGIONS
+              Obsoletas (se mantienen): FEE, MARKET_FEE_*, BURN_ADDRESS, TREASURY_ADDRESS, LIGHT/FULL_NODE_MULT_BP
+tx.ts         Tx += node.bond/unbond {amount} · work.claim {epoch,count,root} · work.prove {epoch,leaves,paths}
+              · name.register {name,card} · name.renew {name,card?} · name.release {name}. TxBase.pow? (sello). register.region?
+              transfer/token.mint/pool.fund: `fee` libre (≥ requiredFee). Block.receipts SIEMPRE vacío (applyBlock lo rechaza si no).
+              Reward.kind "producer"|"work" + epoch. makeTransfer se mueve a wallet.ts (mismo nombre, se exporta igual).
+state.ts      ChainState += workPots, claims, oracle, pow {bits,prev,used}, names, nameOf, nameExpiry; epoch = {pool,produced,present}
+              (sin work/pairs); supply += reserveIn/reserveOut (burned = 0 siempre). NodeInfo += region, streakStart, streakPresent, bond,
+              unbonding[], claimsOk, claimsVoid. curEpoch(s) · markPresent · streakOf · tierFor(n, ep) · nodeWeight · bondFactorBp
+              transferFee(prices, token, amount) · feeForVel · requiredFee(s, tx) · powRequired(s, tx) · chargeToReserve
+              claimableRoles(s, receipt, node) · checkReceipt(s, r, now) · samplesFor(s, claim) · creditedClaims(s, E)
+              nameInfo · nameOfAddress · computeEpochPot (computeRewards = alias) · velLedgerGap (incluye workPots)
+              RETIRADAS: lotteryCredit, creditReceipt (ya no hay crédito por recibo en bloque).
+claims.ts     WorkLeaf {r, role} · leafHash · buildWorkTree (ordena y quita repetidas: usa tree.leaves) · workPath · verifyWorkPath
+              · treeDepth · rootOf · claimSamples · proofIndices (muestra + vecina)
+pow.ts        powBody · powBits · powHash · solvePow · attachPow · leadingZeroBits
+oracle.ts     OracleState · oracleSample/oracleTrade/oracleClose · valueOf(prices, token, amount) → {vel,eur,usd,usdt} · priceOf
+names.ts      ContactCard · cardKeys(identity, mailboxBase) · encodeCard/decodeCard/verifyCard · cardLink/aliasLink/inviteLink
+              · parseVelumLink · sealContactRequest/openContactRequest · createInvite/inviteFromSecret · INVITE_TTL_MS
+tokens.ts     génesis + tUSDT · crear token: 100 VEL → vel_reserve
+dex.ts        marketFee(vel, prices?) (0 bajo 1.000 €, 1 pb desde) · alimenta el oráculo
+wallet.ts     FeeContext {oracle, powBits} · feeContext(s) · todos los make* aceptan ctx (estado o FeeContext) y ponen comisión/sello
+              · makeBond/Unbond/WorkClaim/WorkProve/NameRegister/NameRenew/NameRelease · quote(amount, token, ctx)
+              · oracleInfo · tierInfo · claimsOf · supplyInfo (+reserve, workPots)
+link.ts       modo inverso: LinkGuest.display(name).qr() / onHello · LinkHost.scan(qr).hello() / onAccept · QR "velum-link:v3r:…"
+client.ts     events "request" e "invite" · myCard/myCardLink/cardKeys · sendContactRequest · acceptContactRequest
+              · createInvite(contents) · redeemInvite(link) · startReverseLink(name) · scanReverseLink(qr)
+
+Pendiente para el nodo/puerta/app (fuera de mi parte):
+  · workbook.ts (agente nodo): usar `tree.leaves[i]` y `proofIndices(claimSamples(...), count)` en la prueba (test/workbook.test.ts falla hasta entonces).
+  · RPC sugerida `chain.fees` → feeContext(estado) para que app/web construyan tx sin estado; `name.get`, `oracle`, `claims`.
+  · client.ts › pushShards/ack: elegir el candidato de menor latencia (los 3 cobran).
+  · Mempool: dejar de meter recibos en bloques; sellos PoW se validan en applyTx (copia del estado).
+Tests: bun test (chain 22 · messaging 21 · lottery 3 · lightnode · core). Rendimiento en chain.test.ts › «rendimiento».

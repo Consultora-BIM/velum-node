@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Firma ed25519 sobre el JSON canónico sin 'sig' (signObj). Deterministas (RFC 8032).",
   "cases": [
     {

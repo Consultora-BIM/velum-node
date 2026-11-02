@@ -39,11 +39,11 @@ describe("cartera", () => {
 describe("transacciones", () => {
   test("delegar: sello + firma sobre JSON canónico", () => {
     const k = generateKeyPair(), node = generateKeyPair().address;
-    const tx = buildDelegate(k.secret, "velum-mainnet-1", k.address, 0, node, 5_000_000, 8, 1);
+    const tx = buildDelegate(k.secret, "velum-mainnet-1", k.address, 0, node, 5_000_000n, 8, 1);
     expect(powBits(tx)).toBeGreaterThanOrEqual(8);
     expect(verifyTxSignature(tx)).toBe(true);
-    expect(new TextDecoder().decode(signingBytes(tx)).startsWith('{"amount":5000000,"chain":"velum-mainnet-1"')).toBe(true);
-    expect(verifyTxSignature({ ...tx, amount: 6_000_000 } as any)).toBe(false);
+    expect(new TextDecoder().decode(signingBytes(tx)).startsWith('{"amount":"5000000","chain":"velum-mainnet-1"')).toBe(true); // importes como texto decimal
+    expect(verifyTxSignature({ ...tx, amount: 6_000_000n } as any)).toBe(false);
     expect(txHash(tx)).toHaveLength(48);
   });
 });
@@ -52,13 +52,14 @@ describe("vigilante de depósitos", () => {
   test("respeta confirmaciones, filtra por dirección y lleva el memo", async () => {
     const hot = generateKeyPair().address, other = generateKeyPair().address;
     const blocks = Array.from({ length: 50 }, (_, h) => ({ height: h, hash: "h" + h, ts: h, txs: [] as any[] }));
-    blocks[10]!.txs.push({ type: "transfer", from: other, to: hot, amount: 7, memo: "cliente-42" });
+    blocks[10]!.txs.push({ type: "transfer", from: other, to: hot, amount: "7", memo: "cliente-42" });
+    blocks[11]!.txs.push({ type: "transfer", from: other, to: hot, amount: 2 }); // tx anterior a la v4: 2 µVEL
     blocks[12]!.txs.push({ type: "transfer", from: other, to: other, amount: 9 });
     blocks[45]!.txs.push({ type: "transfer", from: other, to: hot, amount: 3, token: "vUSDT" });
     const reader = { head: async () => ({ height: 49 }), blocks: async (f: number, t: number) => blocks.filter((b) => b.height >= f && b.height <= t) };
     const w = new DepositWatcher(reader, { addresses: [hot], confirmations: 30 });
     const got = await w.poll(7);
-    expect(got.map((d) => [d.amount, d.memo])).toEqual([[7, "cliente-42"]]);
+    expect(got.map((d) => [d.amount, d.memo])).toEqual([[7n, "cliente-42"], [2_000_000_000_000n, undefined]]);
     expect(w.cursor).toBe(19);
     expect(await w.poll()).toEqual([]);
   });

@@ -114,6 +114,11 @@ async function main() {
   // Actualización recién instalada que no arranca: se vuelve a la anterior.
   if (onStartPending(dir)) process.exit(RESTART_EXIT_CODE);
 
+  // La altura de la v4 solo se adelanta en pruebas con una génesis de prueba: en la red real bifurcaría la cadena.
+  if (CHAIN_ID.includes("mainnet") && process.env.VELUM_TEST_ONLY_V4_HEIGHT && !process.env.VELUM_GENESIS_FILE) {
+    console.error("VELUM_TEST_ONLY_V4_HEIGHT solo vale para pruebas con VELUM_GENESIS_FILE. Quítala para arrancar en la red real.");
+    process.exit(1);
+  }
   const cfg = loadConfig(dir, keys.address, args);
   if (process.env.VELUM_LOG_TAG) setLogTag(process.env.VELUM_LOG_TAG);
   const gws = activeGateways(cfg);

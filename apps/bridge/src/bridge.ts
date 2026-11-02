@@ -162,7 +162,7 @@ export class Bridge {
         if (dep.status !== "waiting_cap") { dep.status = "waiting_cap"; this.log(`depósito ${dep.id} espera: tope diario de acuñación`); }
         continue;
       }
-      const tx = makeMint(this.key, chainId, nonce.peek(), dep.velAddress, Number(dep.amount), dep.chain, dep.id, now);
+      const tx = makeMint(this.key, chainId, nonce.peek(), dep.velAddress, BigInt(dep.amount), dep.chain, dep.id, now);
       try {
         dep.mintTx = await this.velum.submit(tx);
         nonce.use();
@@ -224,8 +224,8 @@ export class Bridge {
     const refund = (why: string) => { rec.status = "refund"; rec.reason = why; };
     if (!this.chainOn(tx.dst)) refund("cadena de destino no disponible");
     else if (!isChainAddress(tx.dst, tx.to)) refund("dirección de destino no válida");
-    else if (tx.amount < L.minWithdrawal) refund("por debajo del mínimo de retiro");
-    else if (tx.amount > L.maxWithdrawal) refund("por encima del máximo por retiro");
+    else if (BigInt(tx.amount) < BigInt(L.minWithdrawal)) refund("por debajo del mínimo de retiro");
+    else if (BigInt(tx.amount) > BigInt(L.maxWithdrawal)) refund("por encima del máximo por retiro");
     else {
       const fee = BigInt(L.withdrawalFee[tx.dst] ?? 0);
       const payout = fromVusdt(BigInt(tx.amount) - fee, this.cfg.chains[tx.dst].decimals);
@@ -247,7 +247,7 @@ export class Bridge {
     let n = 0;
     for (const w of todo) {
       try {
-        await this.velum.submit(makeMint(this.key, chainId, nonce.peek(), w.velAddress, Number(w.amount), w.dst, `refund:${w.id}`, now));
+        await this.velum.submit(makeMint(this.key, chainId, nonce.peek(), w.velAddress, BigInt(w.amount), w.dst, `refund:${w.id}`, now));
         nonce.use();
         w.refundAt = now;
         n++;

@@ -6,7 +6,7 @@
 //  · TWAP = Σ precios / Σ bloques con precio en las últimas 60 épocas. Vale si el par movió ≥ 1.000 VEL.
 //  · Si un par no vale: mediana de los otros convertidos (USD↔USDT 1:1; EUR↔USD con el último cambio visto).
 //  · Sin ninguno: null → «sin precio» y sin comisión.
-// Precios en µunidad del token (6 decimales) por 1 VEL. Todo entero.
+// Precios (`number` entero) en unidades mínimas del token (µUSDT, 6 decimales) por 1 VEL. Volúmenes en velos (BigInt).
 import {
   IS_MAINNET, ORACLE_FX_EUR_PER_USD, ORACLE_MAX_PRICE, ORACLE_MIN_VOLUME, ORACLE_PAIRS, ORACLE_TOKENS, ORACLE_WINDOW_EPOCHS, UNIT, VEL,
 } from "./constants";
@@ -17,7 +17,7 @@ export type OracleCurrency = "eur" | "usd" | "usdt";
 const CURRENCIES = ["eur", "usd", "usdt"] as const;
 
 /** Acumulado de un par en una época. */
-export interface OracleBucket { e: number; sum: number; blocks: number; vol: number }
+export interface OracleBucket { e: number; sum: number; blocks: number; vol: bigint }
 
 export interface OracleState {
   /** Última época cerrada que se tuvo en cuenta (−1 = nunca). */
@@ -27,9 +27,9 @@ export interface OracleState {
   usdt: number | null;
   /** De dónde sale cada precio: TWAP propio, reserva cruzada o nada. */
   src: Record<OracleCurrency, "twap" | "cross" | null>;
-  /** TWAP y volumen (µVEL) de cada par en la ventana. */
+  /** TWAP y volumen (velos) de cada par en la ventana. */
   twap: Record<OracleCurrency, number | null>;
-  volume: Record<OracleCurrency, number>;
+  volume: Record<OracleCurrency, bigint>;
   /** Cambio µEUR por 1 USD (último visto con los dos pares válidos). */
   fx: number;
   /** Época en curso (se suma bloque a bloque). */
@@ -42,13 +42,13 @@ export const emptyOracle = (): OracleState => ({
   epoch: -1, eur: null, usd: null, usdt: null,
   src: { eur: null, usd: null, usdt: null },
   twap: { eur: null, usd: null, usdt: null },
-  volume: { eur: 0, usd: 0, usdt: 0 },
+  volume: { eur: 0n, usd: 0n, usdt: 0n },
   fx: ORACLE_FX_EUR_PER_USD,
   acc: {},
   window: {},
 });
 
-const bucket = (o: OracleState, pair: string, e: number) => (o.acc[pair] ??= { e, sum: 0, blocks: 0, vol: 0 });
+const bucket = (o: OracleState, pair: string, e: number) => (o.acc[pair] ??= { e, sum: 0, blocks: 0, vol: 0n });
 
 /** Una muestra por bloque y par con precio (se llama antes de aplicar las tx del bloque). */
 export function oracleSample(s: ChainState, epoch: number) {
@@ -63,8 +63,8 @@ export function oracleSample(s: ChainState, epoch: number) {
   }
 }
 
-/** Volumen de una operación (µVEL) en los pares del oráculo. */
-export function oracleTrade(s: ChainState, pair: string, vel: number, epoch: number) {
+/** Volumen de una operación (velos) en los pares del oráculo. */
+export function oracleTrade(s: ChainState, pair: string, vel: bigint, epoch: number) {
   if (!(Object.values(ORACLE_PAIRS) as string[]).includes(pair)) return;
   bucket(s.oracle, pair, epoch).vol += vel;
 }
@@ -90,7 +90,7 @@ export function oracleClose(s: ChainState, epoch: number) {
     if (acc) win.push({ ...acc, e: epoch });
     while (win.length && win[0]!.e <= epoch - ORACLE_WINDOW_EPOCHS) win.shift();
     if (!win.length) delete o.window[pair];
-    let sum = 0, blocks = 0, vol = 0;
+    let sum = 0, blocks = 0, vol = 0n;
     for (const b of win) { sum += b.sum; blocks += b.blocks; vol += b.vol; }
     o.volume[c] = vol;
     o.twap[c] = blocks > 0 ? Math.floor(sum / blocks) : null;
@@ -123,28 +123,29 @@ export type PriceView = Pick<OracleState, "eur" | "usd" | "usdt">;
 const TOKEN_CURRENCY: Record<string, OracleCurrency> = ORACLE_TOKENS;
 
 export interface Valuation {
-  /** Equivalente en µVEL (null si no hay precio). */
-  vel: number | null;
-  eur: number | null;
-  usd: number | null;
-  usdt: number | null;
+  /** Equivalente en velos (null si no hay precio). */
+  vel: bigint | null;
+  /** µEUR, µUSD, µUSDT. */
+  eur: bigint | null;
+  usd: bigint | null;
+  usdt: bigint | null;
 }
 
-/** Valor de `amount` unidades mínimas de `token` en VEL, EUR, USD y USDT (µunidades). */
-export function valueOf(p: PriceView | null | undefined, token: string, amount: number): Valuation {
+/** Valor de `amount` unidades mínimas de `token` en VEL (velos) y en EUR/USD/USDT (µunidades). */
+export function valueOf(p: PriceView | null | undefined, token: string, amount: bigint): Valuation {
   const out: Valuation = { vel: null, eur: null, usd: null, usdt: null };
-  let vel: number | null = null;
+  let vel: bigint | null = null;
   if (token === VEL) vel = amount;
   else {
     const c = TOKEN_CURRENCY[token];
     if (!c) return out;
     out[c] = amount;
     const price = p?.[c];
-    if (price) vel = conv(amount, UNIT, price);
+    if (price) vel = (amount * UNIT) / BigInt(price);
   }
   out.vel = vel;
   if (vel === null || !p) return out;
-  for (const c of CURRENCIES) if (out[c] === null && p[c]) out[c] = conv(vel, p[c]!, UNIT);
+  for (const c of CURRENCIES) if (out[c] === null && p[c]) out[c] = (vel * BigInt(p[c]!)) / UNIT;
   return out;
 }
 

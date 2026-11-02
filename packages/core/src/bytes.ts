@@ -12,8 +12,18 @@ export const unb64 = (s: string) => base64.decode(s);
 export const b58 = (b: Uint8Array) => base58.encode(b);
 export const unb58 = (s: string) => base58.decode(s);
 
-/** JSON canónico: claves ordenadas, sin espacios. Es lo que se firma y se hashea. */
+// Importes v4 (BigInt): en JSON van SIEMPRE como texto decimal ("1000000000000000000" = 1 VEL).
+// Este parche hace que JSON.stringify los escriba así en todo el programa (RPC, disco, red).
+if (typeof (BigInt.prototype as any).toJSON !== "function") {
+  Object.defineProperty(BigInt.prototype, "toJSON", { value: function (this: bigint) { return this.toString(); }, configurable: true, writable: true });
+}
+
+/**
+ * JSON canónico: claves ordenadas, sin espacios. Es lo que se firma y se hashea.
+ * Un BigInt se escribe como texto decimal ("123"): un importe 123n y el texto "123" dan los mismos bytes.
+ */
 export function canonical(value: unknown): string {
+  if (typeof value === "bigint") return '"' + value.toString() + '"';
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
   const obj = value as Record<string, unknown>;

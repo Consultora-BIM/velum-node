@@ -1,0 +1,24 @@
+Velum · nodo, puerta e instaladores al día con el núcleo v3 (velum-testnet-3). Agente nodo/puerta.
+
+Pruebas (2026-11-01)
+  bun test packages apps/node/test ............ 68 pass, 0 fail
+  bun apps/node/scripts/e2e.ts ................ PASS 15/15 (3 completos + 1 LightNode + puerta local; ~8 min)
+  bun apps/web/scripts/hub-smoke.ts ........... Todo correcto (contra wrangler dev con estado limpio)
+  bun apps/node/scripts/install-test.ts ....... PASS (HOME temporal, binario compilado, desinstalado sin restos)
+  bun spec/generate.ts --check ................ vectores al día (12 grupos; + packages/core/scripts/vectors.ts)
+
+Nodo (apps/node)
+  base por cadena velum-<CHAIN_ID>.db · mempool con applyTx sobre estado de prueba · work.claim/work.prove (WorkBook)
+  firmas ed25519 nativas (node:crypto, 32 µs vs 1.083 µs noble) + caché: 10.000 reclamaciones en 592 ms en frío
+  antispam: 50 shard.put/s (ráfaga 200) por conexión, 2.000 trozos/buzón, tope global con desalojo, 1 MB por llamada
+  varias puertas con relevo → si caen todas: endpoints de la cadena + PEX + semillas DNS (--dns-seed)
+  RPC: chain.epoch · chain.fees · oracle · claims · token.* · market.* · account.balances/orders · supply · difficulty
+       node.get · name.info/of · reenvío de rpc a otro nodo (rpc con node) · RPC entre nodos por direct
+  grifo VEL + 100 tEUR · id corto por defecto (sin hostname) · OTA firmada (update.ts) + minNodeVersion
+  CLI: velum-node start|init|status|update|reset|address|version
+
+Publicación
+  clave en el Llavero de macOS: servicio «velum-release», cuenta «release»
+  pública (update.ts › RELEASE_PUBLIC_KEY): vel25ojv76UAH9ct4k9zBMSBCxMoj2cXthusC8KcLwpnYAT
+  bun apps/node/scripts/release.ts [--version X.Y.Z] [--min X.Y.Z] → dist/release/* + manifest firmado en apps/web/public/download/
+  binarios 57–114 MB (> 25 MiB) → subir a GitHub Releases Consultora-BIM/velum-node v<versión> antes de desplegar el manifiesto

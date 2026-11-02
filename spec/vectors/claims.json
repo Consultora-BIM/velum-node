@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Reclamaciones de trabajo v3: hoja {r, role} → sha512(canónico); hojas ORDENADAS por hash y sin repetir; árbol SHA-512 binario (impar: el último consigo mismo); raíz = sha512('velum/v3/root|' + count + '|' + cima); camino hoja→cima; muestras con baliza y posiciones de la prueba (muestra + vecina).",
   "cases": [
     {

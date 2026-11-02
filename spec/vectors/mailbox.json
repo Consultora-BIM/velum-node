@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Buzón del día = hex(HMAC-SHA512(seed, 'day:'+día))[0..40]; mbAuth = mbPub + t·G; prueba de apertura = ed25519 con s+t.",
   "cases": [
     {

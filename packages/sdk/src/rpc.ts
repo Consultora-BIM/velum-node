@@ -56,8 +56,12 @@ export class VelumRpc {
     const bs = await this.call<any[]>("chain.blocks", { from, to });
     return (bs ?? []).map((b) => ({ height: b.header.height, hash: b.hash, ts: b.header.ts, txs: b.txs ?? [] }));
   }
-  account(address: string) { return this.call<{ balance: number; nonce: number; pending: number }>("account.get", { address }); }
-  balances(address: string) { return this.call<Record<string, number>>("account.balances", { address }); }
+  /** `balance` en texto decimal (velos). Pásalo a BigInt con `toAmount`. */
+  account(address: string) { return this.call<{ balance: string; nonce: number; pending: number }>("account.get", { address }); }
+  /** Saldos por token en texto decimal (unidades mínimas). */
+  balances(address: string) { return this.call<Record<string, string>>("account.balances", { address }); }
+  /** Créditos de mensajería comprados para una dirección (v4). */
+  credits(address: string) { return this.call<{ address: string; credits: number }>("credits.of", { address }); }
   /** Contexto para construir tx: oráculo y bits del sello. */
   fees() { return this.call<{ oracle: any; powBits: number }>("chain.fees"); }
   submit(tx: object) { return this.call<{ id: string }>("tx.submit", { tx }); }

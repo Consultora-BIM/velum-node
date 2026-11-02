@@ -1,0 +1,16 @@
+Velum v2 — cadena y economía listas (packages/core). Detalle: docs/protocolo-v2.md › «Cambios de interfaz (cadena)».
+
+constants.ts  CHAIN_ID velum-testnet-2 · MAX_SUPPLY 1e9 VEL · génesis 100 M al grifo · R0 = 428.082.191 µVEL/época
+              HALVING_EPOCHS 1.051.200 · FEE 0,001 · MARKET_FEE_BP 10 (mín 0,001) · TOKEN_CREATE_FEE 100 VEL
+              FEE_SPLIT_BP 50/40/10 · LIGHT_NODE_MULT_BP 5000 · TIERS multBp 1,00/1,15/1,30/1,50 · ATTESTATION_MODE "soft" · GATEWAYS
+tx.ts         Tx = transfer(token?) | register(kind?) | token.create | token.mint | pool.fund | order.place | order.cancel | device.attest
+              checkTx (sin estado) · Receipt = ReceiptV2 · receiptId(rh) · verifyReceipt · Block.tokenRewards?
+state.ts      genesisState · applyTx(s, tx, mode?) atómica · buildBlock/applyBlock/betterHead (firmas iguales)
+              balances[addr][token] (+ accounts.balance espejo VEL) · emissionFor · computeRewards · velLedgerGap
+              stats.difficulty (entregas/VEL ×1000) + history · activeValidators sin nodos ligeros
+tokens.ts     tEUR/tUSD de prueba (6 dec.) · applyTokenCreate/Mint · symbolProblem
+dex.ts        libro VEL/<token> precio-tiempo · bookDepth · lastPrice · volume24h · expireOrders · marketFee
+attest.ts     verifyAppAttest (CBOR + DER propios, raíz Apple incrustada, hora del bloque) · probado con muestra real
+wallet.ts     makeTransfer/Register/TokenCreate/TokenMint/PoolFund/Order/Cancel/Attest · formatAmount/parseAmount
+              balancesOf · bookOf · tradesOf · tokenInfo · supplyInfo · difficulty · devicesOf
+Tests: bun test (test/chain.test.ts, 18 casos).

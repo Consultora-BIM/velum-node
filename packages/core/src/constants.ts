@@ -1,46 +1,46 @@
 // Parámetros de consenso por red. Cambiarlos rompe el consenso: van con el CHAIN_ID.
 // `VELUM_NETWORK=mainnet|testnet` (por defecto mainnet) elige la red al compilar o arrancar (network.ts).
-// Toda la economía usa enteros (µVEL, puntos básicos). Nada de decimales en la máquina de estados.
+// v4 (docs/economia-v4.md): importes BigInt con 18 decimales (1 VEL = 10^18 velos), tope 21.000 M VEL, mitad cada 4 años,
+// sin quema. Los importes van en JSON como texto decimal (amount.ts). Nada de coma flotante en la máquina de estados.
 import { IS_MAINNET, NETWORK, TESTNET_GENESIS_TIME } from "./network";
+import { UNIT } from "./amount";
 
 export { NETWORK, IS_MAINNET };
-export const CHAIN_ID = IS_MAINNET ? "velum-mainnet-1" : "velum-testnet-3";
-/** Versión de protocolo más alta que conoce este núcleo (mainnet empieza en 1; la tabla está en upgrades.ts). */
-export const PROTOCOL_VERSION = IS_MAINNET ? 1 : 3;
+// Testnet 4: misma economía v4 desde génesis (la testnet-3 en µVEL queda retirada).
+export const CHAIN_ID = IS_MAINNET ? "velum-mainnet-1" : "velum-testnet-4";
+/** Versión de protocolo más alta que conoce este núcleo (la tabla está en upgrades.ts). v4 = economía v4. */
+export const PROTOCOL_VERSION = 4;
 
-/** 1 VEL = 1.000.000 µVEL. Todo importe en la cadena va en µVEL (entero). */
-export const UNIT = 1_000_000;
+export { UNIT, VEL_DECIMALS, VELO } from "./amount";
 /** Símbolo de la moneda nativa. */
 export const VEL = "VEL";
 
-// ---------- Oferta limitada (protocolo-v2 §7) ----------
-/** Tope absoluto de VEL acuñables en toda la historia (µVEL). `supply.minted` nunca lo supera. */
-export const MAX_SUPPLY = 1_000_000_000 * UNIT;
-/** Génesis: 100 M VEL (10 %). Mainnet: a la cartera fría (genesis/mainnet.json). Testnet: al grifo. */
-export const GENESIS_RESERVE_SUPPLY = 100_000_000 * UNIT;
+// ---------- Oferta limitada (economía v4) ----------
+/** Tope absoluto: 21.000.000.000 VEL (velos). `supply.minted` nunca lo supera. */
+export const MAX_SUPPLY: bigint = 21_000_000_000n * UNIT;
+/** Génesis: 100 M VEL. Mainnet: a la cartera fría (genesis/mainnet.json). Testnet: al grifo. */
+export const GENESIS_RESERVE_SUPPLY: bigint = 100_000_000n * UNIT;
 /** @deprecated nombre de testnet. Es GENESIS_RESERVE_SUPPLY. */
 export const GENESIS_FAUCET_SUPPLY = GENESIS_RESERVE_SUPPLY;
-/** Lo que se puede ganar trabajando: 900 M VEL. */
-export const MINEABLE_SUPPLY = MAX_SUPPLY - GENESIS_RESERVE_SUPPLY;
+/** Lo que se descubre trabajando: 20.900 M VEL. */
+export const MINEABLE_SUPPLY: bigint = MAX_SUPPLY - GENESIS_RESERVE_SUPPLY;
 
-// ---------- Comisiones (protocolo-v3 §5: sin quema) ----------
-/** @deprecated v2 (comisión fija). En v3 la comisión depende del valor en EUR (`requiredFee`). */
-export const FEE = 1_000;
-/** Por debajo de 1.000 € (µEUR) los pagos y operaciones no pagan comisión: llevan sello PoW. */
-export const FEE_FREE_EUR = 1_000 * 1_000_000;
+// ---------- Comisiones (sin quema: nada se destruye) ----------
+/** Por debajo de 1.000 € (µEUR, testnet) los pagos y operaciones no pagan comisión: llevan sello PoW. */
+export const FEE_FREE_EUR: bigint = 1_000n * 1_000_000n;
 /**
  * Mainnet: el umbral va en USDT dentro del consenso (1.100 vUSDT ≈ 1.000 € a 0,92 €/$; docs/mainnet.md §3).
- * El euro solo se muestra fuera de la cadena. µUSDT.
+ * El euro solo se muestra fuera de la cadena. µUSDT (vUSDT tiene 6 decimales).
  */
-export const FEE_FREE_USDT = 1_100 * 1_000_000;
-/** Desde el umbral: 1 punto básico (0,01 %) del importe en VEL, mínimo 1 µVEL. */
+export const FEE_FREE_USDT: bigint = 1_100n * 1_000_000n;
+/** Desde el umbral: 1 punto básico (0,01 %) del importe en VEL, mínimo 1 velo. */
 export const FEE_BP = 1;
 /** @deprecated v2. El mercado usa la misma regla que los pagos (FEE_BP desde 1.000 €). */
 export const MARKET_FEE_BP = FEE_BP;
 /** @deprecated v2. */
 export const MARKET_FEE_MIN = 1;
 /** Crear un token cuesta 100 VEL, que van enteros a la Reserva de la Red (antispam). */
-export const TOKEN_CREATE_FEE = 100 * UNIT;
+export const TOKEN_CREATE_FEE: bigint = 100n * UNIT;
 /** Reparto de toda comisión (pb): 80 % bolsa de nodos, 20 % Reserva de la Red. No se quema nada. */
 export const FEE_SPLIT_BP = { pool: 8_000, reserve: 2_000 } as const;
 /** @deprecated v1 (fracciones). Usa FEE_SPLIT_BP. */
@@ -50,11 +50,7 @@ export const BP = 10_000;
 /** La Reserva devuelve cada época este tanto (pb sobre 10.000 → 10 = 0,1 %) de su saldo a la bolsa de nodos. */
 export const RESERVE_RELEASE_BP = 10;
 
-/** Cuentas especiales (no tienen clave privada). */
-/** @deprecated v2: en v3 no se quema VEL; la cuenta queda a 0. */
-export const BURN_ADDRESS = "vel_burn";
-/** @deprecated v2: en v3 las comisiones no van a tesorería. */
-export const TREASURY_ADDRESS = "vel_treasury";
+/** Cuentas especiales (no tienen clave privada). En Velum no existe cuenta de quema: el VEL nunca se destruye. */
 /** Reserva de la Red: sin clave; solo la regla de liberación (0,1 %/época) saca de ella. */
 export const RESERVE_ADDRESS = "vel_reserve";
 export const POOL_ADDRESS = "vel_pool";
@@ -69,14 +65,16 @@ export const EPOCH_BLOCKS = IS_MAINNET ? 1_800 : 30;
 export const EPOCH_MS = EPOCH_BLOCKS * BLOCK_MS;
 export const EPOCHS_PER_DAY = Math.floor(86_400_000 / EPOCH_MS);
 export const MONTH_EPOCHS = 30 * EPOCHS_PER_DAY;
-/** Épocas entre mitades ≈ 2 años (testnet: 1.051.200 de 1 min; mainnet: 17.520 de 1 h). */
-export const HALVING_EPOCHS = 730 * EPOCHS_PER_DAY;
+/** Épocas entre mitades = 4 años de 365,25 días (mainnet: 35.064 épocas de 1 h; testnet: 2.103.840 de 1 min). */
+export const HALVING_EPOCHS = Math.round((4 * 365.25 * 86_400_000) / EPOCH_MS);
+/** Mitades con emisión: tras la 33.ª (≈ 132 años, como Bitcoin) R(e) = 0. */
+export const MAX_HALVINGS = 33;
 /**
- * Descubrimiento de la época 0 (µVEL): floor(900 M VEL / (2 × HALVING_EPOCHS)).
- * Testnet 428,082191 VEL por época de 1 min; mainnet 25.684,931506 VEL por época de 1 h.
- * Con suelo entero, Σ HALVING × floor(R0 / 2^k) < 2 × R0 × HALVING ≤ 900 M VEL (se comprueba en los tests).
+ * Descubrimiento de la época 0 (velos): floor(20.900 M VEL / (2 × HALVING_EPOCHS)).
+ * Mainnet: 298.026,465890942276979237 VEL por época de 1 h. R(e) = floor(R0 / 2^k), k = floor(e / HALVING_EPOCHS) < 33.
+ * Σ HALVING × floor(R0 / 2^k) < 2 × R0 × HALVING ≤ 20.900 M VEL (se comprueba en los tests); ~99,2 % a los 28 años.
  */
-export const R0 = Math.floor(MINEABLE_SUPPLY / (2 * HALVING_EPOCHS));
+export const R0: bigint = MINEABLE_SUPPLY / (2n * BigInt(HALVING_EPOCHS));
 /** @deprecated v1. Se mantiene por compatibilidad: es R0. */
 export const EPOCH_EMISSION = R0;
 /** Un nodo está "activo" si ha dado señal de vida en los últimos N bloques. */
@@ -114,7 +112,7 @@ export const STREAK_GAP_EPOCHS = 2 * EPOCHS_PER_DAY;
 export const pillarMonths = (networkAgeMonths: number) => Math.min(12, 6 + Math.floor(Math.max(0, networkAgeMonths) / 4));
 
 /** Fianza opcional: hasta 10.000 VEL suben el peso en el sorteo hasta ×2. Desbloqueo con 14 días de espera. */
-export const BOND_CAP = 10_000 * UNIT;
+export const BOND_CAP: bigint = 10_000n * UNIT;
 export const BOND_UNBOND_EPOCHS = 14 * EPOCHS_PER_DAY;
 /** Desbloqueos pendientes por nodo (acota el estado). */
 export const MAX_UNBONDING = 8;
@@ -154,8 +152,8 @@ export const ORACLE_TOKENS: Record<string, "eur" | "usd" | "usdt"> = IS_MAINNET 
 /** Ventana TWAP: la última hora (60 épocas de 1 min en testnet; 1 época en mainnet). */
 export const ORACLE_WINDOW_EPOCHS = Math.max(1, Math.round(3_600_000 / EPOCH_MS));
 /** Volumen mínimo en la ventana para fiarse de un par. */
-export const ORACLE_MIN_VOLUME = 1_000 * UNIT;
-/** Precio máximo que cuenta (µunidad por VEL): acota sumas y manipulación. */
+export const ORACLE_MIN_VOLUME: bigint = 1_000n * UNIT;
+/** Precio máximo que cuenta (unidades mínimas del token por 1 VEL; `number`): acota sumas y manipulación. */
 export const ORACLE_MAX_PRICE = 1e12;
 /** Semilla de cambio EUR por USD (µEUR por 1 USD) hasta que la red vea los dos pares a la vez. */
 export const ORACLE_FX_EUR_PER_USD = 920_000;
@@ -188,7 +186,7 @@ export const POOL_MAX_EPOCHS = 365 * EPOCHS_PER_DAY;
 
 // ---------- Mercado (§9) ----------
 /** Orden mínima: 1 VEL (evita polvo en el libro). */
-export const MIN_ORDER = 1 * UNIT;
+export const MIN_ORDER: bigint = 1n * UNIT;
 /** Caducidad por defecto y máxima de una orden (épocas): 7 días y 30 días. */
 export const ORDER_TTL_DEFAULT = 7 * EPOCHS_PER_DAY;
 export const ORDER_TTL_MAX = 30 * EPOCHS_PER_DAY;
@@ -196,7 +194,7 @@ export const ORDER_TTL_MAX = 30 * EPOCHS_PER_DAY;
 export const MAX_OPEN_ORDERS = 50;
 /** Últimas operaciones que guarda el estado (anillo) para el explorador. */
 export const TRADE_LOG = 500;
-/** Precio máximo (µtoken por VEL): evita desbordes. */
+/** Precio máximo (unidades mínimas del token por 1 VEL; `number` entero): evita desbordes. */
 export const MAX_PRICE = 1e15;
 
 // ---------- Atestación (§11) ----------
@@ -217,7 +215,7 @@ export const SHARD_TTL_MS = 7 * 24 * 3600 * 1000;
 /** Grifo de la testnet: clave pública conocida, solo existe en pruebas. En mainnet NO hay grifo. */
 export const HAS_FAUCET = !IS_MAINNET;
 export const FAUCET_SEED_TEXT = "velum-testnet-1/faucet";
-export const FAUCET_DRIP = 25 * UNIT;
+export const FAUCET_DRIP: bigint = 25n * UNIT;
 /** Hora de génesis de testnet. En mainnet la fija genesis/mainnet.json: usa `genesisTime()` (genesis.ts). */
 export const GENESIS_TIME = TESTNET_GENESIS_TIME; // 1 nov 2026
 
@@ -227,11 +225,11 @@ export const BRIDGE_TOKEN = "vUSDT";
 export const BRIDGE_CHAINS = ["tron", "polygon", "ethereum"] as const;
 export type BridgeChain = (typeof BRIDGE_CHAINS)[number];
 /** Canje mínimo en consenso (µvUSDT). La pasarela puede pedir más y devuelve lo que no paga. */
-export const BRIDGE_MIN_REDEEM = 1_000_000;
+export const BRIDGE_MIN_REDEEM: bigint = 1_000_000n;
 export const BRIDGE_REF_MAX = 160;
 
 // ---------- Staking delegado (docs/ecosistema.md §6) ----------
-export const MIN_DELEGATION = 1 * UNIT;
+export const MIN_DELEGATION: bigint = 1n * UNIT;
 /** Delegados por nodo: acota el trabajo de cada cierre de época. */
 export const MAX_DELEGATORS_PER_NODE = 1_000;
 /** Comisión del nodo sobre lo que descubre con delegación (pb): por defecto 10 %, máximo 20 %. */
@@ -239,6 +237,17 @@ export const COMMISSION_DEFAULT_BP = 1_000;
 export const COMMISSION_MAX_BP = 2_000;
 export const COMMISSION_MAX_STEP_BP = 500;
 export const COMMISSION_COOLDOWN_EPOCHS = 7 * EPOCHS_PER_DAY;
+
+// ---------- Créditos de mensajería para empresas (economía v4, docs/economia-v4.md) ----------
+/**
+ * Precio de 1 crédito (= 1 mensaje por encima del cupo gratuito) en µUSDT: 22 µUSDT ≈ 2 € por 100.000 mensajes.
+ * `credits.buy` convierte VEL en créditos al precio del oráculo; sin precio, la tx no entra.
+ */
+export const CREDIT_PRICE_USDT = 22n;
+/** Compra mínima de créditos: 1 VEL. El VEL pagado va entero a la bolsa de nodos de la época (no se destruye). */
+export const CREDIT_MIN_BUY: bigint = 1n * UNIT;
+/** Cupo gratuito de mensajes por remitente: 20 cada 10 minutos (≈ 2.880 al día). Fuera de consenso: lo aplican puertas y nodos. */
+export const FREE_MESSAGES_PER_10MIN = 20;
 
 /**
  * Puertas de entrada públicas (Worker), en orden: velumprotocol.org (principal), dominio de BIM y workers.dev de respaldo

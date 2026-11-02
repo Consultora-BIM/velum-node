@@ -1,7 +1,7 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
-  "description": "Oráculo TWAP: muestra por bloque del último precio (tope 10¹²) antes de las tx; ventana de 60 épocas; volumen mínimo 1.000 VEL; reserva cruzada por mediana (USD↔USDT 1:1, EUR↔USD con el cambio visto).",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
+  "description": "Oráculo TWAP (volúmenes en velos, texto decimal): muestra por bloque del último precio (tope 10¹²) antes de las tx; ventana de 60 épocas; volumen mínimo 1.000 VEL; reserva cruzada por mediana (USD↔USDT 1:1, EUR↔USD con el cambio visto).",
   "cases": [
     {
       "after": "3 épocas EUR 2,00 y USD 2,20 con 400 VEL/época",
@@ -21,9 +21,9 @@
           "usdt": 2000000
         },
         "volume": {
-          "eur": 1250000000,
-          "usd": 1200000000,
-          "usdt": 50000000
+          "eur": "1250000000000000000000",
+          "usd": "1200000000000000000000",
+          "usdt": "50000000000000000000"
         },
         "fx": 909090
       }
@@ -46,9 +46,9 @@
           "usdt": 2000000
         },
         "volume": {
-          "eur": 1250000000,
-          "usd": 1200000000,
-          "usdt": 50000000
+          "eur": "1250000000000000000000",
+          "usd": "1200000000000000000000",
+          "usdt": "50000000000000000000"
         },
         "fx": 954545
       }

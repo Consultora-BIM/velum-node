@@ -1,7 +1,8 @@
 // Construir, firmar y verificar transacciones sin estado.
 // Lo que se firma = bytes UTF-8 del JSON canónico de la tx sin `sig` (claves ordenadas, sin espacios).
 // Es lo que debe mostrar y firmar una cartera física (docs/ecosistema.md §4).
-import { canonical, utf8ToBytes, sign, verify, attachPow, hashObj, makeTransfer, type FeeContext, type Tx } from "@velum/core";
+// v4: los importes son BigInt (velos: 1 VEL = 10^18) o texto decimal; nunca `number`.
+import { amt, canonical, utf8ToBytes, sign, verify, attachPow, hashObj, makeTransfer, makeCreditsBuy, type FeeContext, type Tx } from "@velum/core";
 
 export type UnsignedTx = Record<string, unknown> & { type: string; chain: string; from: string; nonce: number; ts: number };
 
@@ -35,7 +36,8 @@ export function buildStamped<T extends UnsignedTx>(secret: string, body: T, bits
 }
 
 export interface TransferInput {
-  secret: string; from: string; to: string; amount: number; nonce: number; chain: string;
+  /** Unidades mínimas (velos si es VEL): BigInt o texto decimal. */
+  secret: string; from: string; to: string; amount: bigint | string; nonce: number; chain: string;
   token?: string; memo?: string; ctx: FeeContext; ts?: number;
 }
 
@@ -49,17 +51,24 @@ export function buildTransfer(i: TransferInput): Tx {
 const base = (chain: string, from: string, nonce: number, ts?: number) => ({ chain, from, nonce, ts: ts ?? Date.now() });
 
 /** Delegar VEL a un nodo (staking). */
-export const buildDelegate = (secret: string, chain: string, from: string, nonce: number, node: string, amount: number, bits: number, ts?: number) =>
-  buildStamped(secret, { type: "stake.delegate", ...base(chain, from, nonce, ts), node, amount }, bits);
+export const buildDelegate = (secret: string, chain: string, from: string, nonce: number, node: string, amount: bigint | string, bits: number, ts?: number) =>
+  buildStamped(secret, { type: "stake.delegate", ...base(chain, from, nonce, ts), node, amount: amt(amount) }, bits);
 
 /** Retirar delegación (14 días de espera). */
-export const buildUndelegate = (secret: string, chain: string, from: string, nonce: number, node: string, amount: number, bits: number, ts?: number) =>
-  buildStamped(secret, { type: "stake.undelegate", ...base(chain, from, nonce, ts), node, amount }, bits);
+export const buildUndelegate = (secret: string, chain: string, from: string, nonce: number, node: string, amount: bigint | string, bits: number, ts?: number) =>
+  buildStamped(secret, { type: "stake.undelegate", ...base(chain, from, nonce, ts), node, amount: amt(amount) }, bits);
 
 /** El nodo fija su comisión sobre las recompensas de sus delegados (puntos básicos, 0–2.000). */
 export const buildCommission = (nodeSecret: string, chain: string, node: string, nonce: number, bp: number, bits: number, ts?: number) =>
   buildStamped(nodeSecret, { type: "node.commission", ...base(chain, node, nonce, ts), bp }, bits);
 
 /** Retiro de vUSDT por el puente: canjea vUSDT en Velum y pide el pago en `dst`. */
-export const buildBridgeRedeem = (secret: string, chain: string, from: string, nonce: number, dst: "tron" | "polygon" | "ethereum", to: string, amount: number, bits: number, ts?: number) =>
-  buildStamped(secret, { type: "bridge.redeem", ...base(chain, from, nonce, ts), dst, to, amount, fee: 0 }, bits);
+export const buildBridgeRedeem = (secret: string, chain: string, from: string, nonce: number, dst: "tron" | "polygon" | "ethereum", to: string, amount: bigint | string, bits: number, ts?: number) =>
+  buildStamped(secret, { type: "bridge.redeem", ...base(chain, from, nonce, ts), dst, to, amount: amt(amount), fee: 0n }, bits);
+
+/** Créditos de mensajería para empresas y bots (v4): `amount` velos (mín. 1 VEL) → créditos no transferibles para `to`. */
+export function buildCreditsBuy(secret: string, chain: string, from: string, nonce: number, amount: bigint | string, ctx: FeeContext, to?: string, ts?: number): Tx {
+  const tx = makeCreditsBuy(secret, from, nonce, { amount, to, ctx, ts });
+  if (tx.chain !== chain) throw new Error(`Este SDK está compilado para ${tx.chain}, no para ${chain}`);
+  return tx;
+}

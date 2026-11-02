@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Niveles v3: racha continua (> 2.880 épocas sin presencia la reinicia), presencia 90/95/98 %, meses de 43.200 épocas, Pilar M(t) = min(12, 6 + floor(edadRed/4)); peso = tipo(2|1) × floor(nivelPb × fianzaPb / 10⁶).",
   "cases": [
     {
@@ -34,23 +34,23 @@
     {
       "bondFactorBp": [
         [
-          0,
+          "0",
           10000
         ],
         [
-          1,
+          "1",
           10000
         ],
         [
-          5000000000,
+          "5000000000000000000000",
           15000
         ],
         [
-          10000000000,
+          "10000000000000000000000",
           20000
         ],
         [
-          20000000000,
+          "20000000000000000000000",
           20000
         ]
       ]

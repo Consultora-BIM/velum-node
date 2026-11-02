@@ -63,7 +63,7 @@ describe("nodo ligero", () => {
     const answer = (method: string, params: any) => {
       switch (method) {
         case "node.get": return registered && params.address === lightKeys.address ? { address: lightKeys.address, kind: "light", payout: lightKeys.address, name: "móvil" } : null;
-        case "account.get": return { balance: 0, nonce: 0, pending: 0 };
+        case "account.get": return { balance: "0", nonce: 0, pending: 0 }; // v4: importes en texto decimal
         case "tx.submit": txs.push(params.tx); registered = true; return { id: V.txId(params.tx) };
         case "chain.epoch": return snapshot ? { ...snapshot, online: [full.address, lightKeys.address] } : null;
         case "mailbox.open": return { shards: [], courier: full.address };

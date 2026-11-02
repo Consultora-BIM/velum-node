@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Sorteo público: sha512(baliza|trozo|papel[|ronda]) → 64 bits BE mod Σpesos → elección acumulada sobre nodos ordenados. Completo 2, ligero 1.",
   "cases": [
     {

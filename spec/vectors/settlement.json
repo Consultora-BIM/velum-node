@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Liquidación v3: crédito = min(count, floor(1,5 × w_i × Σ_{j≠i} count_j / (W_probadas − w_i))); la bolsa se reparte ∝ crédito.",
   "cases": [
     {

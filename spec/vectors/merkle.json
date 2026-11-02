@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Raíz de Merkle SHA-256 (hojas hex; impar = se duplica la última; vacía = 64 ceros).",
   "cases": [
     {

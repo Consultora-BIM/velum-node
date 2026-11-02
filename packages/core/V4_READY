@@ -1,0 +1,45 @@
+Velum núcleo v4 listo (economía v4). Guía de migración para código de interfaz (app, web, escritorio).
+
+1. IMPORTES = BigInt
+   - 1 VEL = 10^18 velos (`V.UNIT === 10n ** 18n`, `V.VEL_DECIMALS === 18`). vUSDT sigue con 6 decimales.
+   - Todo importe del estado y de las tx es BigInt: saldos, comisiones, oferta, recompensas, órdenes, delegaciones.
+   - Los precios del oráculo y de las órdenes siguen siendo `number` entero (unidades mínimas del token por 1 VEL).
+   - Nunca mezcles number y BigInt: `x + 1` falla si x es BigInt. Usa `1n`, `V.UNIT`, `BigInt(n)`.
+
+2. JSON / RPC / API = texto decimal
+   - En la red, la RPC del nodo y /api/* los importes llegan como TEXTO decimal: "1500000000000000000" = 1,5 VEL.
+   - Léelos con `V.toAmount(texto)` (lanza) o `V.amountOrNull(texto)` (null si no vale). Nunca con Number() ni parseFloat.
+   - `JSON.stringify` ya escribe BigInt como texto (parche en bytes.ts al importar @velum/core).
+   - Ejemplos: `account.get` → { balance: "…", nonce, pending }; `account.balances` → { VEL: "…", vUSDT: "…" };
+     `supply` / /api/stats → supplyInfo con importes en texto. `burned` YA NO EXISTE (el VEL nunca se destruye); usa `reserve`.
+
+3. MOSTRAR Y LEER
+   - Mostrar: `V.formatAmount("VEL", velos)` → "1.234,5 VEL" (acepta BigInt o el texto de la RPC).
+     Firma: formatAmount(token, units, decimals = 18 (VEL) | 6 (otros), maxDecimals = decimals, withSymbol = true, locale = "es-ES").
+     `maxDecimals` TRUNCA. Para tokens de usuario pasa `V.decimalsOf(state, token)`.
+     Atajo: `V.formatVel(velos, 3)` → "12,345 VEL". Sin símbolo y con otro locale: formatAmount("VEL", x, 18, 2, false, "en-US").
+   - Leer lo que escribe la persona: `V.parseAmount("12,5")` → 12500000000000000000n (BigInt) o null.
+     parseAmount(texto, decimals = 18, locale?). Con locale quita sus separadores de miles ("1.234,56" en es-ES).
+     Devuelve null si hay más decimales de los que admite el token (no redondea).
+
+4. CONSTRUIR TX
+   - Los constructores (makeTransfer, makeOrder, makeBond, makePoolFund, makeTokenCreate, makeTokenMint, makeCreditsBuy…)
+     aceptan BigInt o texto decimal. Un `number` LANZA a propósito (sería ambiguo con los µVEL de la v3).
+   - `V.quote(importe, token, ctx)` devuelve fee, receive, totalVel, vel, eur, usd, usdt como BigInt (µEUR/µUSD/µUSDT).
+   - Nuevo: `V.makeCreditsBuy(secret, from, nonce, { amount, to?, ctx })` compra créditos de mensajería (empresas y bots
+     por encima del cupo gratuito de 20 mensajes / 10 min). `V.creditsQuote(amount, ctx)` → nº de créditos (0 sin precio).
+     RPC `credits.of { address }` → { credits }. Los usuarios normales NUNCA lo necesitan.
+
+5. OFERTA (para textos y gráficos)
+   - Tope 21.000.000.000 VEL (`V.MAX_SUPPLY`), reserva de génesis 100 M, mitad cada 4 años (`V.HALVING_EPOCHS`, 35.064 épocas de 1 h),
+     33 mitades (`V.MAX_HALVINGS`, ≈ 132 años), ~99,2 % descubierto a los 28 años. Emisión de la época: `V.emissionFor(e)` (BigInt).
+   - Detalle y cuentas: docs/economia-v4.md.
+
+6. MAINNET: ACTIVACIÓN EN VIVO
+   - La v4 se activa en la altura `V.MAINNET_V4_HEIGHT` (upgrades.ts). Antes de esa altura los bloques siguen las reglas v3;
+     el nodo v2.1.0 ya sirve TODO en formato v4 (texto decimal en velos) también antes de H.
+   - Las tx v4 (texto decimal) no entran hasta H; las v3 (number) no entran desde H. Los clientes pueden esperar a H para enviar.
+   - Historial: las tx antiguas se sirven ya convertidas a velos (`V.txView`).
+
+7. QUITADO: BURN_ADDRESS, TREASURY_ADDRESS, FEE, supply.burned, formatAmount con 6 decimales por defecto para VEL.
+   Testnet: CHAIN_ID "velum-testnet-4" (v4 desde génesis).

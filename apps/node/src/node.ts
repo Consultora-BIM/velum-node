@@ -6,12 +6,13 @@ import {
   checkReceiptProof, currentSnapshot, snapshotFor, makeRegister, balancesOf, bookOf, tradesOf, ordersOf, tokenInfo,
   tokenList, supplyInfo, difficulty, formatAmount, pairOf, feeContext, makeWorkClaim, makeWorkProve, WorkBook, nameInfo, nameOfAddress,
   CHAIN_ID, FAUCET_DRIP, UNIT, VEL, LIGHT_METHODS, PROTOCOL_VERSION, UPGRADE_NEEDED, HAS_FAUCET,
-  delegationsOfNode, delegationsOfAddress,
+  delegationsOfNode, delegationsOfAddress, txView, rewardView, protocolAt, MAINNET_V4_HEIGHT, msgCreditsOf,
   type Block, type GossipItem, type HubToNode, type KeyPair, type NodeHello, type PeerInfo, type Presence, type Receipt,
   type RpcMethod, type Shard, type Tx, type MailboxOpen, type DirectRpc, type EpochInfo,
 } from "@velum/core";
 import { Chain, type AddResult } from "./chain";
 import { Store, type StoredShard } from "./store";
+import { NodeCreditBook, ShardGate } from "./gate";
 import { Mempool, PresencePool, ReceiptPool } from "./pools";
 import { LruSet } from "./lru";
 import { log } from "./log";
@@ -37,14 +38,13 @@ const STARTUP_GRACE_MS = 3_000;
 const FAUCET_INTERVAL_MS = 3_600_000;
 /** El grifo también da tokens de prueba para estrenar el mercado. */
 const FAUCET_TOKEN = "tEUR";
-const FAUCET_TOKEN_DRIP = 100 * 1_000_000; // 100 tEUR (6 decimales)
+const FAUCET_TOKEN_DRIP = 100n * 1_000_000n; // 100 tEUR (6 decimales)
 const MAX_PEX = 64;
 const MAX_OUT_LINKS = 12;
 const OPEN_RESULT_BYTES = 700_000;
 // Antispam (por conexión de cliente) y cupos de almacenamiento.
 const SHARD_PUT_RATE = 50; // por segundo
 const SHARD_PUT_BURST = 200;
-const MAX_SHARDS_PER_MAILBOX = 2_000;
 const MAX_SHARDS_TOTAL = 200_000;
 const MAX_CLIENT_FRAME = 1024 * 1024; // 1 MB por llamada RPC
 const DIRECT_RPC_TIMEOUT_MS = 10_000;
@@ -52,7 +52,7 @@ const DIRECT_RPC_TIMEOUT_MS = 10_000;
 const DIRECT_METHODS = new Set<string>([
   "chain.head", "chain.block", "chain.blocks", "chain.epoch", "account.get", "account.history", "account.balances", "account.orders",
   "tx.submit", "node.info", "node.get", "node.list", "stats", "token.info", "token.list", "market.book", "market.trades", "supply",
-  "difficulty", "shard.put", "receipt.submit", "mailbox.open", "faucet", "chain.fees", "oracle", "claims", "name.info", "name.of",
+  "difficulty", "shard.put", "receipt.submit", "mailbox.open", "faucet", "chain.fees", "oracle", "claims", "name.info", "name.of", "credits.of",
 ]);
 
 type WsLike = { send(data: string): unknown; close(code?: number, reason?: string): void };
@@ -123,6 +123,9 @@ export class VelumNode {
   private subs = new Map<string, Map<string, string>>();
   private clientSubs = new Map<string, Set<string>>();
   private buckets = new Map<string, { tokens: number; at: number }>();
+  /** Antispam de trozos: cupo por remitente y topes por buzón (gate.ts, fuera de consenso). */
+  private gate: ShardGate;
+  private credits: NodeCreditBook;
 
   // Consenso
   private lastProposedSlot = -1;
@@ -147,6 +150,9 @@ export class VelumNode {
     this.work = new WorkBook(keys.address);
     this.store = new Store(dir, opts.dbFile);
     this.chain = new Chain(this.store);
+    // Créditos: lo comprado se lee del estado (solo lectura); lo gastado se apunta aquí, fuera de la cadena.
+    this.credits = new NodeCreditBook((a) => msgCreditsOf(this.chain.state, a), this.store);
+    this.gate = new ShardGate(this.store, this.credits);
     this.paused = cfg.paused;
   }
 
@@ -174,6 +180,7 @@ export class VelumNode {
     this.timers = [];
     this.disconnectNetwork();
     this.server?.stop(true);
+    try { this.credits.flush(); } catch {}
     this.store.close();
   }
 
@@ -651,7 +658,7 @@ export class VelumNode {
   /** Guarda un trozo respetando cupos (por buzón y total, desalojando los que antes caducan) y lo empuja. */
   private keepShard(s: StoredShard): boolean {
     if (this.delivered.has(s.id)) return false;
-    if (this.store.countMailbox(s.mailbox) >= MAX_SHARDS_PER_MAILBOX) { this.counters.shardsRejected++; return false; }
+    if (this.gate.mailboxProblem(s)) { this.counters.shardsRejected++; return false; }
     if (this.store.shardCount() >= MAX_SHARDS_TOTAL) this.store.evictOldest(Math.ceil(MAX_SHARDS_TOTAL / 100));
     if (!this.store.putShard(s)) return false;
     this.counters.shardsRelayed++;
@@ -665,6 +672,7 @@ export class VelumNode {
     if (s && s.rh !== r.rh) return;
     this.delivered.add(r.shard);
     this.store.deleteShard(r.shard);
+    this.gate.delivered(r.shard);
   }
 
   // =====================================================================
@@ -848,7 +856,8 @@ export class VelumNode {
     if (extra.length || log.isDebug) log.info(line);
     for (const t of b.txs) {
       switch (t.type) {
-        case "transfer": log.info(`  pago ${formatAmount(t.token ?? VEL, t.amount, st.tokens[t.token ?? ""]?.decimals ?? 6, 3)} ${short(t.from)} → ${short(t.to)}`); break;
+        case "transfer": { const v = txView(t); log.info(`  pago ${formatAmount(t.token ?? VEL, v.amount, t.token && t.token !== VEL ? st.tokens[t.token]?.decimals ?? 6 : 18, 3)} ${short(t.from)} → ${short(t.to)}`); break; }
+        case "credits.buy": log.info(`  créditos de mensajería: ${formatVel(txView(t).amount)} a la bolsa de nodos (${short(t.to ?? t.from)})`); break;
         case "register": log.info(`  alta de nodo ${t.kind === "light" ? "ligero" : "completo"}: ${t.name} (${short(t.from)})`); break;
         case "token.create": log.info(`  token nuevo ${t.symbol} («${t.name}») por ${short(t.from)}`); break;
         case "token.mint": log.info(`  emisión de ${t.symbol} para ${short(t.to)}`); break;
@@ -871,10 +880,11 @@ export class VelumNode {
       }
     }
     if (b.rewards.length) {
-      const total = b.rewards.reduce((a, x) => a + x.amount, 0);
+      const rw = b.rewards.map((r) => rewardView(r, b.header.height));
+      const total = rw.reduce((a, x) => a + x.amount, 0n);
       if (!extra.length && !log.isDebug) log.info(line);
       log.info(`  cierre de época ${epochOf(b.header.height) - 1}: ${formatVel(total)} descubiertos por ${b.rewards.length} nodo(s)`);
-      const mine = b.rewards.find((x) => x.node === this.me);
+      const mine = rw.find((x) => x.node === this.me);
       if (mine) log.info(`  descubierto por este nodo: +${formatVel(mine.amount)} (nivel ${mine.tier}, ${mine.shards} créditos)`);
     }
     for (const tr of b.tokenRewards ?? []) if (tr.node === this.me) log.info(`  bolsa ${tr.token}: +${tr.amount} unidades para mí`);
@@ -930,6 +940,8 @@ export class VelumNode {
     for (const [a, t] of this.faucetMem) if (Date.now() - t > FAUCET_INTERVAL_MS) this.faucetMem.delete(a);
     const now = Date.now();
     for (const [k, b] of this.buckets) if (now - b.at > 120_000) this.buckets.delete(k);
+    this.gate.sweep();
+    this.credits.flush();
     if (this.chain.height > 2_000 && this.chain.height % 10 < 2) this.store.pruneSideBlocks(this.chain.height - 2_000);
   }
 
@@ -947,6 +959,10 @@ export class VelumNode {
     if (typeof f.node === "string" && f.node && f.node !== this.me) {
       const [ok, ko] = reply(f.node);
       if (!this.allowShardPut(ws.data.key, f.method)) return ko(new RpcError("Demasiados trozos seguidos; espera un momento"));
+      if (f.method === "shard.put") {
+        const q = this.gate.quotaOnly(f.params?.shard, { conn: ws.data.key, pass: f.params?.pass });
+        if (q) { this.counters.rateLimited++; return ko(new RpcError(q)); }
+      }
       this.callNode(f.node, f.method, f.params ?? {}).then(ok, ko);
       return;
     }
@@ -1028,13 +1044,15 @@ export class VelumNode {
         return this.epochInfo(params.epoch === undefined ? undefined : Number(params.epoch));
       case "account.get": {
         const a = String(params.address ?? "");
-        const acc = s.accounts[a] ?? { balance: 0, nonce: 0 };
+        const acc = s.accounts[a] ?? { balance: 0n, nonce: 0 };
         return { balance: acc.balance, nonce: acc.nonce, pending: this.mempool.pendingFrom(a).length };
       }
       case "account.balances":
         return balancesOf(s, addr());
       case "account.orders":
         return ordersOf(s, addr());
+      case "credits.of":
+        return { address: addr(), credits: msgCreditsOf(s, addr()) };
       case "account.history":
         return this.store.history(String(params.address ?? ""), Number(params.limit ?? 50));
       case "token.info":
@@ -1085,7 +1103,8 @@ export class VelumNode {
         const shard = params.shard as Shard;
         const err = shardProblem(shard);
         if (err) { this.counters.shardsRejected++; throw new RpcError(err); }
-        if (this.store.countMailbox(shard.mailbox) >= MAX_SHARDS_PER_MAILBOX) throw new RpcError("Ese buzón está lleno; inténtalo más tarde");
+        const no = this.gate.admit(shard, { conn: client, pass: params.pass });
+        if (no) { this.counters.rateLimited++; throw new RpcError(no); }
         this.seen.add("s:" + shard.id);
         this.keepShard({ ...shard, carrier: this.me });
         this.broadcast({ kind: "shard", shard, carrier: this.me }, { kind: "self" });
@@ -1141,7 +1160,7 @@ export class VelumNode {
         const n = s.nodes[this.me];
         return {
           address: this.me, name: this.cfg.name, payout: this.cfg.payout, version: PUBLIC_VERSION, height: s.height,
-          peers: this.peerCount(), tier: n ? tierFor(n, epochOf(s.height)).id : "bronce", earned: n?.earned ?? 0,
+          peers: this.peerCount(), tier: n ? tierFor(n, epochOf(s.height)).id : "bronce", earned: n?.earned ?? 0n,
           uptime: Math.floor((Date.now() - this.startedAt) / 1000), kind: "full",
         };
       }
@@ -1204,7 +1223,7 @@ export class VelumNode {
       this.store.faucetMark(address, now);
       this.seen.add("t:" + r.id);
       this.broadcast({ kind: "tx", tx }, { kind: "self" });
-      let tokens = 0;
+      let tokens = 0n;
       if (s.tokens[FAUCET_TOKEN]) {
         const t2 = makeTransfer(f.secret, f.address, address, FAUCET_TOKEN_DRIP, nonce + 1, { token: FAUCET_TOKEN, ctx: feeContext(s) });
         const r2 = this.mempool.add(t2, s);
@@ -1214,7 +1233,7 @@ export class VelumNode {
           this.broadcast({ kind: "tx", tx: t2 }, { kind: "self" });
         }
       }
-      log.info(`grifo: ${formatVel(FAUCET_DRIP)}${tokens ? ` y ${tokens / 1_000_000} ${FAUCET_TOKEN}` : ""} para ${short(address)}`);
+      log.info(`grifo: ${formatVel(FAUCET_DRIP)}${tokens ? ` y ${formatAmount(FAUCET_TOKEN, tokens, 6)}` : ""} para ${short(address)}`);
       return { id: r.id, amount: FAUCET_DRIP, ...(tokens ? { tokens: { [FAUCET_TOKEN]: tokens } } : {}) };
     }
     throw new RpcError(lastErr);
@@ -1233,13 +1252,13 @@ export class VelumNode {
     return { node: this.me, name: this.cfg.name, version: PUBLIC_VERSION, height: this.chain.height, since: this.startedAt, kind: "full", ...(this.cfg.endpoint ? { endpoint: this.cfg.endpoint } : {}) };
   }
 
-  stats(): Record<string, number> {
+  stats(): Record<string, number | bigint> {
     const s = this.chain.state;
     const sup = supplyInfo(s);
     return {
       height: s.height, ts: s.ts, nodes: Object.keys(s.nodes).length, active: activeValidators(s).length, peers: this.peerCount(),
       lightNodes: Object.values(s.nodes).filter((n) => n.kind === "light").length,
-      minted: s.supply.minted, burned: s.supply.burned, circulating: sup.circulating, feesCollected: s.supply.feesCollected,
+      minted: s.supply.minted, circulating: sup.circulating, feesCollected: s.supply.feesCollected, reserve: sup.reserve,
       transfers: s.supply.transfers, shards: s.supply.shards, pool: s.epoch.pool, epoch: epochOf(s.height), emission: sup.emission,
       difficulty: s.stats.difficulty ?? -1, tokens: Object.keys(s.tokens).length, trades: s.dex.trades.length,
       mempool: this.mempool.size, receiptsPending: this.receipts.size, mailboxes: this.subs.size, shardsStored: this.store.shardCount(),
@@ -1257,8 +1276,8 @@ export class VelumNode {
       address: this.me, name: this.cfg.name, payout: this.cfg.payout, version: PUBLIC_VERSION, chain: CHAIN_ID,
       height: s.height, hash: s.hash, headTs: s.ts, paused: this.paused, held: this.held, ready: this.isReady(),
       registered: !!n, active: activeValidators(s).includes(this.me),
-      tier: n ? tierFor(n, epochOf(s.height)).id : null, earned: n?.earned ?? 0, credits: n?.credits ?? 0,
-      payoutBalance: s.accounts[this.cfg.payout]?.balance ?? 0,
+      tier: n ? tierFor(n, epochOf(s.height)).id : null, earned: n?.earned ?? 0n, credits: n?.credits ?? 0,
+      payoutBalance: s.accounts[this.cfg.payout]?.balance ?? 0n,
       payoutBalances: balancesOf(s, this.cfg.payout),
       shardsDelivered: n?.shardsDelivered ?? 0, blocksProducedTotal: n?.blocksProduced ?? 0,
       gateway: this.gateway, gateways: activeGateways(this.cfg), hubConnected: this.hubWelcomed,
@@ -1268,6 +1287,9 @@ export class VelumNode {
       epoch: epochOf(s.height), difficulty: s.stats.difficulty === null ? null : s.stats.difficulty / 1000,
       autoUpdate: this.cfg.autoUpdate,
       unit: UNIT,
+      decimals: 18,
+      protocol: protocolAt(s.height + 1),
+      v4Height: MAINNET_V4_HEIGHT,
     };
   }
 }
@@ -1278,7 +1300,7 @@ export const checkShard = (s: Shard) => shardProblem(s);
 
 const short = (a: string) => (a.length > 14 ? `${a.slice(0, 7)}…${a.slice(-4)}` : a);
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
-const formatVel = (micro: number) => formatAmount(VEL, micro, 6, 3);
+const formatVel = (velos: bigint | string) => formatAmount(VEL, velos, 18, 3);
 
 function isLocal(ip: string | undefined, origin: string | null, port: number) {
   const okIp = !ip || ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";

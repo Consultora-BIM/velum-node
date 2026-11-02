@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Relleno a cubo + Reed-Solomon 3 de 5 (Cauchy, GF(256) 0x11d). id = hex(sha512('msg|stripe|idx'))[0..32]. rh = sha512(HMAC-SHA512(rseed, id)[0..32]).",
   "cases": [
     {

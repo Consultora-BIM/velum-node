@@ -1,71 +1,71 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Sello PoW v3: cuerpo = sha512(canónico sin sig ni pow); sello = sha512(cuerpo ‖ u64be(pow)); bits = ceros iniciales. pow = primer nonce desde 0 con ≥ bits.",
   "cases": [
     {
       "body": {
         "type": "transfer",
-        "chain": "velum-testnet-3",
+        "chain": "velum-testnet-4",
         "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
         "nonce": 0,
         "ts": 1793494800000,
         "to": "velEToY9jXh2CjmptAhPzzg8bVqUcsU1inD6ThtEoCvoset",
-        "amount": 5000000,
-        "fee": 0
+        "amount": "5000000000000000000",
+        "fee": "0"
       },
       "bits": 8,
-      "bodyHash": "39c06db5776baaab8e915c10b4f60b97ad5530b3e4c9bd412bb263acf5f45d7347b99ea336210b7c97a87279bed04c1df3d39eaa0adc35838473d94f58785be4",
-      "pow": 190,
-      "stampHash": "007c2746b99a363ff291c4d8b7fddc4edd30b0cbcc4ca63901c8601a47cb91c2a013f315036fa79924839df4b667e4119fdc4c37f080b462099e09f33ab88928",
-      "achieved": 9
+      "bodyHash": "b653d5b873f2d4601092ed5b7906ca3f1e9d8d450514be1216b6b0c551551fa61c14f6e87de808f978db7419f2aedf47e5d3c193412908206f671c2842ed1a83",
+      "pow": 67,
+      "stampHash": "003710e4c9428416ed8dbecd22e92adc7ade4c6b54478e0d0b10e0591dbb4ec2f8ffad71e4f7961c06e6a409daff420595ba8cb80d6bd02c1266437c1fc30989",
+      "achieved": 10
     },
     {
       "body": {
         "type": "transfer",
-        "chain": "velum-testnet-3",
+        "chain": "velum-testnet-4",
         "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
         "nonce": 0,
         "ts": 1793494800000,
         "to": "velEToY9jXh2CjmptAhPzzg8bVqUcsU1inD6ThtEoCvoset",
-        "amount": 5000000,
-        "fee": 0
+        "amount": "5000000000000000000",
+        "fee": "0"
       },
       "bits": 16,
-      "bodyHash": "39c06db5776baaab8e915c10b4f60b97ad5530b3e4c9bd412bb263acf5f45d7347b99ea336210b7c97a87279bed04c1df3d39eaa0adc35838473d94f58785be4",
-      "pow": 1069,
-      "stampHash": "000031dd58bc8b3c2eb3aaa6d5399e47c68be986ee62ba67c7ca995183089b95a24f68b6e77c72964341b7d2988022d3adaf55c5bb919dc9e7f56ac7a4be28c1",
-      "achieved": 18
+      "bodyHash": "b653d5b873f2d4601092ed5b7906ca3f1e9d8d450514be1216b6b0c551551fa61c14f6e87de808f978db7419f2aedf47e5d3c193412908206f671c2842ed1a83",
+      "pow": 31182,
+      "stampHash": "00005e73e5cc39980d6128dc9c81d649a4718c0eae17ba2ef0f12085707e955b97d7990a68e65c4bca59cc29da39e228f5e13eff573fec71286d8f1c51d922e3",
+      "achieved": 17
     },
     {
       "body": {
         "type": "order.cancel",
-        "chain": "velum-testnet-3",
+        "chain": "velum-testnet-4",
         "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
         "nonce": 3,
         "ts": 1793494800000,
         "id": "o7"
       },
       "bits": 8,
-      "bodyHash": "562ecf570971bdf539b2e2d1964fc9aabcab3062668c985573dc6506f9963e4a56fdd15fb0cae63e841b2febedf1e262410dafebff04aef5819e2f07ef971c09",
-      "pow": 50,
-      "stampHash": "00b1dc37cdf531e21670abce7c5c89e51a48e31b3835b0bfd8b3457402975432a1367eca6e1a7b214f8f6e91b0a19cd7e484cc376eb4beb0e2c289b6e4096217",
+      "bodyHash": "ad7995c859bacee8910b6a4caad09340d55a97bb1ce3af6794e3262a4c37bc247f4cd5b36b9aafa6f2552eee54a544ae4973c8491f9c8de856cb61176ecf494b",
+      "pow": 175,
+      "stampHash": "00b5d3fa79ee9edd7cf5d2aafd993478feedd985a5f664974a1903feb2e902e6fa5d662b595f1e11a0055542437892e8da207483cb88cf9199881cc51a6e966f",
       "achieved": 8
     },
     {
       "body": {
         "type": "order.cancel",
-        "chain": "velum-testnet-3",
+        "chain": "velum-testnet-4",
         "from": "vel8jhh4WnXPxDdn5Xn3Gqw8Q5yd3oi4Qih4T9Ur6PgczYm",
         "nonce": 3,
         "ts": 1793494800000,
         "id": "o7"
       },
       "bits": 16,
-      "bodyHash": "562ecf570971bdf539b2e2d1964fc9aabcab3062668c985573dc6506f9963e4a56fdd15fb0cae63e841b2febedf1e262410dafebff04aef5819e2f07ef971c09",
-      "pow": 130078,
-      "stampHash": "0000627e8a4c731a92ddc50662764d7484d16b44eed561a83516c28d9d88ba1bafaf43071497304723a0955f5281b5a6b0061780c4264315eb04baf71e54cf7a",
-      "achieved": 17
+      "bodyHash": "ad7995c859bacee8910b6a4caad09340d55a97bb1ce3af6794e3262a4c37bc247f4cd5b36b9aafa6f2552eee54a544ae4973c8491f9c8de856cb61176ecf494b",
+      "pow": 38310,
+      "stampHash": "0000062aceb27fa236ac2db49ddc5e7817f18a6dea3d5b16e3baaf467587be4ef557daf3bd2f6711a49023eeee9be30a8e4d9eaa2db2ab9966684f6341fe3c46",
+      "achieved": 21
     }
   ]
 }

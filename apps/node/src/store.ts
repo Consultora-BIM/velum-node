@@ -2,7 +2,7 @@
 import { Database } from "bun:sqlite";
 import { join } from "node:path";
 import { existsSync, rmSync } from "node:fs";
-import { CHAIN_ID, txId, type Block, type ChainState, type Shard, type Tx } from "@velum/core";
+import { CHAIN_ID, reviveBlock, reviveState, txId, txView, type Block, type ChainState, type Shard, type Tx } from "@velum/core";
 
 export type StoredShard = Shard & { carrier: string };
 
@@ -33,6 +33,9 @@ export class Store {
       CREATE INDEX IF NOT EXISTS txindex_h ON txindex(height);
       CREATE TABLE IF NOT EXISTS faucet (address TEXT PRIMARY KEY, ts INTEGER NOT NULL);
     `);
+    // Tamaño en bytes del trozo (para el tope de bytes por buzón). Bases anteriores: se añade la columna.
+    const cols = this.db.query("PRAGMA table_info(shards)").all() as { name: string }[];
+    if (!cols.some((c) => c.name === "size")) this.db.exec("ALTER TABLE shards ADD COLUMN size INTEGER NOT NULL DEFAULT 0");
   }
 
   close() { try { this.db.close(); } catch {} }
@@ -44,7 +47,7 @@ export class Store {
   hasBlock(hash: string) { return !!this.db.query("SELECT 1 FROM blocks WHERE hash = ?").get(hash); }
   getBlock(hash: string): Block | null {
     const r = this.db.query("SELECT json FROM blocks WHERE hash = ?").get(hash) as { json: string } | null;
-    return r ? JSON.parse(r.json) : null;
+    return r ? reviveBlock(JSON.parse(r.json)) : null;
   }
   mainHash(height: number): string | null {
     const r = this.db.query("SELECT hash FROM main WHERE height = ?").get(height) as { hash: string } | null;
@@ -52,7 +55,7 @@ export class Store {
   }
   mainBlock(height: number): Block | null {
     const r = this.db.query("SELECT b.json FROM main m JOIN blocks b ON b.hash = m.hash WHERE m.height = ?").get(height) as { json: string } | null;
-    return r ? JSON.parse(r.json) : null;
+    return r ? reviveBlock(JSON.parse(r.json)) : null;
   }
   mainRange(from: number, to: number, maxBytes = 768 * 1024): Block[] {
     const rows = this.db.query("SELECT b.json FROM main m JOIN blocks b ON b.hash = m.hash WHERE m.height BETWEEN ? AND ? ORDER BY m.height").all(from, to) as { json: string }[];
@@ -61,7 +64,7 @@ export class Store {
     for (const r of rows) {
       bytes += r.json.length;
       if (out.length > 0 && bytes > maxBytes) break;
-      out.push(JSON.parse(r.json));
+      out.push(reviveBlock(JSON.parse(r.json)));
     }
     return out;
   }
@@ -90,10 +93,11 @@ export class Store {
   }
 
   // ---------- Estado ----------
+  // En disco, importes en texto decimal (v4). Un estado guardado por el nodo v2.0.0 (µVEL, números) se sube a v4 al leerlo.
   saveHead(state: ChainState) { this.setMeta("state", JSON.stringify(state)); }
   loadHead(): ChainState | null {
     const v = this.getMeta("state");
-    return v ? JSON.parse(v) : null;
+    return v ? reviveState(JSON.parse(v)) : null;
   }
   putSnapshot(state: ChainState) {
     this.db.query("INSERT OR REPLACE INTO snapshots (hash, height, json) VALUES (?, ?, ?)").run(state.hash, state.height, JSON.stringify(state));
@@ -102,7 +106,7 @@ export class Store {
   }
   getSnapshot(hash: string): ChainState | null {
     const r = this.db.query("SELECT json FROM snapshots WHERE hash = ?").get(hash) as { json: string } | null;
-    return r ? JSON.parse(r.json) : null;
+    return r ? reviveState(JSON.parse(r.json)) : null;
   }
   getMeta(k: string): string | null {
     const r = this.db.query("SELECT v FROM meta WHERE k = ?").get(k) as { v: string } | null;
@@ -113,13 +117,14 @@ export class Store {
   // ---------- Historial ----------
   history(addr: string, limit = 50): { height: number; ts: number; tx: Tx }[] {
     const rows = this.db.query("SELECT height, ts, json FROM txindex WHERE addr = ? ORDER BY height DESC, ts DESC LIMIT ?").all(addr, Math.min(Math.max(1, limit), 500)) as { height: number; ts: number; json: string }[];
-    return rows.map((r) => ({ height: r.height, ts: r.ts, tx: JSON.parse(r.json) }));
+    // Tx anteriores a la v4 (µVEL, números) se sirven ya convertidas a velos en texto (vista v4).
+    return rows.map((r) => ({ height: r.height, ts: r.ts, tx: txView(JSON.parse(r.json)) }));
   }
 
   // ---------- Fragmentos ----------
   putShard(s: StoredShard): boolean {
     const { carrier, ...shard } = s;
-    const r = this.db.query("INSERT OR IGNORE INTO shards (id, mailbox, msg, json, carrier, exp) VALUES (?, ?, ?, ?, ?, ?)").run(shard.id, shard.mailbox, shard.msg, JSON.stringify(shard), carrier, shard.exp);
+    const r = this.db.query("INSERT OR IGNORE INTO shards (id, mailbox, msg, json, carrier, exp, size) VALUES (?, ?, ?, ?, ?, ?, ?)").run(shard.id, shard.mailbox, shard.msg, JSON.stringify(shard), carrier, shard.exp, shardBytes(shard));
     return r.changes > 0;
   }
   hasShard(id: string) { return !!this.db.query("SELECT 1 FROM shards WHERE id = ?").get(id); }
@@ -134,6 +139,11 @@ export class Store {
     return rows.map((r) => ({ ...JSON.parse(r.json), carrier: r.carrier }));
   }
   pruneShards(now = Date.now()): number { return this.db.query("DELETE FROM shards WHERE exp <= ?").run(now).changes; }
+  /** Trozos y bytes pendientes (sin caducar) en un buzón. */
+  mailboxUsage(mailbox: string, now = Date.now()): { n: number; bytes: number } {
+    const r = this.db.query("SELECT COUNT(*) AS n, COALESCE(SUM(size), 0) AS bytes FROM shards WHERE mailbox = ? AND exp > ?").get(mailbox, now) as { n: number; bytes: number };
+    return { n: r.n, bytes: r.bytes };
+  }
   countMailbox(mailbox: string): number { return (this.db.query("SELECT COUNT(*) AS n FROM shards WHERE mailbox = ?").get(mailbox) as { n: number }).n; }
   /** Hace sitio: borra los `n` trozos que antes caducan. */
   evictOldest(n: number): number { return this.db.query("DELETE FROM shards WHERE id IN (SELECT id FROM shards ORDER BY exp LIMIT ?)").run(n).changes; }
@@ -152,3 +162,5 @@ export class Store {
 }
 
 const txKey = (t: Tx) => txId(t);
+/** Bytes útiles de un trozo (datos en base64 → bytes). */
+export const shardBytes = (s: Pick<Shard, "data">) => (typeof s.data === "string" ? Math.floor((s.data.length * 3) / 4) : 0);

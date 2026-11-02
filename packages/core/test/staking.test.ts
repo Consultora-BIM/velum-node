@@ -11,8 +11,8 @@ const base = (s: V.ChainState, from: string) => ({ chain: V.CHAIN_ID, from, nonc
 
 /** Escrow VEL = fianzas + desbloqueos + delegaciones + retiradas en espera (sin órdenes ni bolsas en estas pruebas). */
 function escrowParts(s: V.ChainState) {
-  let sum = 0;
-  for (const n of Object.values(s.nodes)) sum += n.bond + n.unbonding.reduce((a, u) => a + u.amount, 0) + (n.delegated ?? 0);
+  let sum = 0n;
+  for (const n of Object.values(s.nodes)) sum += n.bond + n.unbonding.reduce((a, u) => a + u.amount, 0n) + (n.delegated ?? 0n);
   for (const list of Object.values(s.stake?.unbonding ?? {})) for (const u of list) sum += u.amount;
   return sum;
 }
@@ -24,7 +24,7 @@ function setup() {
   if (!reserveKey) throw new Error("estas pruebas usan la testnet");
   s.height = 1;
   s.ts = V.GENESIS_TIME + 10_000;
-  for (const [to, amt] of [[alice.address, 3_000], [bob.address, 1_000], [node.address, 10]] as const)
+  for (const [to, amt] of [[alice.address, 3_000n], [bob.address, 1_000n], [node.address, 10n]] as const)
     ok(s, V.makeTransfer(reserveKey.secret, reserve, to, amt * V.UNIT, nonceOf(s, reserve), { ts: 1, ctx: s }));
   ok(s, V.makeRegister(node.secret, node.address, 0, { payout: node.address, version: "3", kind: "full" } as any));
   return s;
@@ -34,10 +34,10 @@ describe.skipIf(V.IS_MAINNET)("staking delegado", () => {
   test("delegar suma peso con el mismo tope que la fianza; comisión limitada", () => {
     const s = setup();
     const w0 = V.nodeWeight(s.nodes[node.address]!, 0);
-    ok(s, stamped(alice.secret, { type: "stake.delegate", ...base(s, alice.address), node: node.address, amount: 2_000 * V.UNIT }, s));
+    ok(s, stamped(alice.secret, { type: "stake.delegate", ...base(s, alice.address), node: node.address, amount: 2_000n * V.UNIT }, s));
     const w1 = V.nodeWeight(s.nodes[node.address]!, 0);
     expect(w1).toBeGreaterThan(w0);
-    expect(s.nodes[node.address]!.delegated).toBe(2_000 * V.UNIT);
+    expect(s.nodes[node.address]!.delegated).toBe(2_000n * V.UNIT);
     // Sin sello no entra.
     expect(V.applyTx(s, V.signTx(bob.secret, { type: "stake.delegate", ...base(s, bob.address), node: node.address, amount: V.UNIT } as any))).toContain("sello");
     // Comisión: máximo 20 %, ±5 puntos por cambio, uno cada 7 días.
@@ -48,28 +48,29 @@ describe.skipIf(V.IS_MAINNET)("staking delegado", () => {
     expect(escrowParts(s)).toBe(V.balanceOf(s, V.ESCROW_ADDRESS));
   });
 
-  test("reparto exacto por época: comisión + prorrata, sin crear ni perder un µVEL", () => {
+  test("reparto exacto por época: comisión + prorrata, sin crear ni perder un velo", () => {
     const s = setup();
-    ok(s, stamped(alice.secret, { type: "stake.delegate", ...base(s, alice.address), node: node.address, amount: 3_000 * V.UNIT }, s));
-    ok(s, stamped(bob.secret, { type: "stake.delegate", ...base(s, bob.address), node: node.address, amount: 1_000 * V.UNIT }, s));
+    ok(s, stamped(alice.secret, { type: "stake.delegate", ...base(s, alice.address), node: node.address, amount: 3_000n * V.UNIT }, s));
+    ok(s, stamped(bob.secret, { type: "stake.delegate", ...base(s, bob.address), node: node.address, amount: 1_000n * V.UNIT }, s));
     const n = s.nodes[node.address]!;
-    for (const amount of [1, 7, 999, 1_000_001, 25_684_931_506]) {
+    for (const amount of [1n, 7n, 999n, 1_000_001n, 25_684_931_506n, 298_026_465_890_942_276_979_237n]) {
       const before = { a: V.balanceOf(s, alice.address), b: V.balanceOf(s, bob.address), n: V.balanceOf(s, node.address) };
       const toDel = V.payNode(s, n, amount);
       const got = { a: V.balanceOf(s, alice.address) - before.a, b: V.balanceOf(s, bob.address) - before.b, n: V.balanceOf(s, node.address) - before.n };
       expect(got.a + got.b + got.n).toBe(amount);
       expect(got.a + got.b).toBe(toDel);
       // 10 % de comisión por defecto; el resto 3:1 entre Alice y Bob (el nodo no tiene fianza propia).
-      if (amount >= 1_000_001) {
-        expect(got.n).toBeGreaterThanOrEqual(Math.floor(amount / 10));
-        expect(Math.abs(got.a - 3 * got.b)).toBeLessThanOrEqual(3);
+      if (amount >= 1_000_001n) {
+        expect(got.n).toBeGreaterThanOrEqual(amount / 10n);
+        const diff = got.a - 3n * got.b;
+        expect(diff < 0n ? -diff : diff).toBeLessThanOrEqual(3n);
       }
     }
   });
 
   test("bloques con cierre de época: los delegados cobran y la contabilidad cuadra", () => {
     let s = setup();
-    ok(s, stamped(alice.secret, { type: "stake.delegate", ...base(s, alice.address), node: node.address, amount: 2_000 * V.UNIT }, s));
+    ok(s, stamped(alice.secret, { type: "stake.delegate", ...base(s, alice.address), node: node.address, amount: 2_000n * V.UNIT }, s));
     s.epoch = { ...s.epoch, produced: {} };
     const aliceBefore = V.balanceOf(s, alice.address);
     let ts = s.ts;
@@ -78,26 +79,26 @@ describe.skipIf(V.IS_MAINNET)("staking delegado", () => {
       s = V.buildBlock(s, { proposer: node.address, ts, txs: [], presence: [] }).state;
     }
     expect(V.balanceOf(s, alice.address)).toBeGreaterThan(aliceBefore);
-    expect(s.stake!.del[node.address]![alice.address]!.earned).toBeGreaterThan(0);
-    expect(V.velLedgerGap(s)).toBe(0);
+    expect(s.stake!.del[node.address]![alice.address]!.earned).toBeGreaterThan(0n);
+    expect(V.velLedgerGap(s)).toBe(0n);
     expect(escrowParts(s)).toBe(V.balanceOf(s, V.ESCROW_ADDRESS));
   });
 
   test("retirar: 14 días de espera, tope de retiradas y vuelta exacta", () => {
     const s = setup();
-    ok(s, stamped(alice.secret, { type: "stake.delegate", ...base(s, alice.address), node: node.address, amount: 100 * V.UNIT }, s));
+    ok(s, stamped(alice.secret, { type: "stake.delegate", ...base(s, alice.address), node: node.address, amount: 100n * V.UNIT }, s));
     const bal = V.balanceOf(s, alice.address);
-    ok(s, stamped(alice.secret, { type: "stake.undelegate", ...base(s, alice.address), node: node.address, amount: 40 * V.UNIT }, s));
-    expect(s.nodes[node.address]!.delegated).toBe(60 * V.UNIT);
-    expect(V.applyTx(s, stamped(alice.secret, { type: "stake.undelegate", ...base(s, alice.address), node: node.address, amount: 61 * V.UNIT }, s))).toContain("insuficiente");
+    ok(s, stamped(alice.secret, { type: "stake.undelegate", ...base(s, alice.address), node: node.address, amount: 40n * V.UNIT }, s));
+    expect(s.nodes[node.address]!.delegated).toBe(60n * V.UNIT);
+    expect(V.applyTx(s, stamped(alice.secret, { type: "stake.undelegate", ...base(s, alice.address), node: node.address, amount: 61n * V.UNIT }, s))).toContain("insuficiente");
     const release = s.stake!.unbonding[alice.address]![0]!.release;
     expect(release).toBe(V.curEpoch(s) + V.BOND_UNBOND_EPOCHS);
     V.releaseUndelegations(s, release - 1);
     expect(V.balanceOf(s, alice.address)).toBe(bal);
     V.releaseUndelegations(s, release);
-    expect(V.balanceOf(s, alice.address)).toBe(bal + 40 * V.UNIT);
+    expect(V.balanceOf(s, alice.address)).toBe(bal + 40n * V.UNIT);
     expect(escrowParts(s)).toBe(V.balanceOf(s, V.ESCROW_ADDRESS));
-    expect(V.delegationsOfAddress(s, alice.address).delegations[0]!.amount).toBe(60 * V.UNIT);
+    expect(V.delegationsOfAddress(s, alice.address).delegations[0]!.amount).toBe(60n * V.UNIT);
     expect(V.delegationsOfNode(s, node.address).length).toBe(1);
   });
 

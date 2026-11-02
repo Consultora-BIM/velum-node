@@ -1,6 +1,6 @@
 {
-  "protocol": 3,
-  "chain": "velum-testnet-3",
+  "protocol": 4,
+  "chain": "velum-testnet-4",
   "description": "Frase BIP-39 → semilla. Cartera = SLIP-10 ed25519 m/44'/7420'/0'/0'/0'. Identidad y buzón base = HKDF-SHA512. Direcciones = 'vel' + base58(ed25519 pub).",
   "cases": [
     {

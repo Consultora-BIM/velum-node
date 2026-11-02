@@ -141,7 +141,7 @@ try {
   Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Description 'Nodo Velum' -Force | Out-Null
   Ok "Arranque automático al iniciar sesión (tarea programada $TaskName)"
 } catch {
-  # En algunos equipos (p. ej. PUESTO-16) registrar tareas falla sin ser administrador: acceso directo en Inicio.
+  # En algunos equipos registrar tareas falla sin ser administrador: acceso directo en Inicio.
   $lnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'Velum.lnk'
   $ws = New-Object -ComObject WScript.Shell
   $sc = $ws.CreateShortcut($lnk); $sc.TargetPath = 'wscript.exe'; $sc.Arguments = "`"$Vbs`""; $sc.WindowStyle = 7; $sc.Save()

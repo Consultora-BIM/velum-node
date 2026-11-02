@@ -11,8 +11,9 @@ import {
 import type { NodeCommissionTx, StakeDelegateTx, StakeUndelegateTx } from "./tx";
 import { type ChainState, type NodeInfo, balanceOf, credit, curEpoch, debit, mulDiv } from "./state";
 
-export interface Delegation { amount: number; earned: number; since: number }
-export interface StakeUnbonding { node: string; amount: number; release: number }
+/** Importes en velos (BigInt). */
+export interface Delegation { amount: bigint; earned: bigint; since: number }
+export interface StakeUnbonding { node: string; amount: bigint; release: number }
 export interface StakeState {
   /** del[nodo][delegado] */
   del: Record<string, Record<string, Delegation>>;
@@ -25,7 +26,7 @@ const stake = (s: ChainState): StakeState => ((s as any).stake ??= { del: {}, un
 export const stakeOf = (s: ChainState): StakeState | undefined => (s as any).stake;
 
 export const commissionOf = (n: Pick<NodeInfo, "commissionBp">) => n.commissionBp ?? COMMISSION_DEFAULT_BP;
-export const delegatedTo = (n: Pick<NodeInfo, "delegated">) => n.delegated ?? 0;
+export const delegatedTo = (n: Pick<NodeInfo, "delegated">): bigint => n.delegated ?? 0n;
 
 export function applyDelegate(s: ChainState, tx: StakeDelegateTx): string | null {
   const n = s.nodes[tx.node];
@@ -38,7 +39,7 @@ export function applyDelegate(s: ChainState, tx: StakeDelegateTx): string | null
   const byNode = (stake(s).del[tx.node] ??= {});
   debit(s, tx.from, VEL, tx.amount);
   credit(s, ESCROW_ADDRESS, VEL, tx.amount);
-  const d = (byNode[tx.from] ??= { amount: 0, earned: 0, since: s.height });
+  const d = (byNode[tx.from] ??= { amount: 0n, earned: 0n, since: s.height });
   d.amount += tx.amount;
   n.delegated = delegatedTo(n) + tx.amount;
   return null;
@@ -52,13 +53,13 @@ export function applyUndelegate(s: ChainState, tx: StakeUndelegateTx): string | 
   if ((st.unbonding[tx.from]?.length ?? 0) >= MAX_UNBONDING) return "Demasiadas retiradas en espera";
   const list = (st.unbonding[tx.from] ??= []);
   d.amount -= tx.amount;
-  if (d.amount === 0) {
+  if (d.amount === 0n) {
     delete st.del[tx.node]![tx.from];
     if (!Object.keys(st.del[tx.node]!).length) delete st.del[tx.node];
   }
   const n = s.nodes[tx.node]!;
   n.delegated = delegatedTo(n) - tx.amount;
-  if (n.delegated === 0) delete n.delegated;
+  if (n.delegated === 0n) delete n.delegated;
   list.push({ node: tx.node, amount: tx.amount, release: curEpoch(s) + BOND_UNBOND_EPOCHS });
   return null;
 }
@@ -76,20 +77,20 @@ export function applyCommission(s: ChainState, tx: NodeCommissionTx): string | n
 }
 
 /**
- * Entrega `amount` µVEL descubiertos por el nodo `n`: comisión + resto a prorrata (fianza propia y delegados).
+ * Entrega `amount` velos descubiertos por el nodo `n`: comisión + resto a prorrata (fianza propia y delegados).
  * Devuelve lo que fue a los delegados. Σ créditos = amount exacto.
  */
-export function payNode(s: ChainState, n: NodeInfo, amount: number): number {
+export function payNode(s: ChainState, n: NodeInfo, amount: bigint): bigint {
   const delegated = delegatedTo(n);
   const dels = stakeOf(s)?.del[n.address];
-  if (amount <= 0 || delegated <= 0 || !dels) { credit(s, n.payout, VEL, amount); return 0; }
+  if (amount <= 0n || delegated <= 0n || !dels) { credit(s, n.payout, VEL, amount); return 0n; }
   const rest = amount - mulDiv(amount, commissionOf(n), BP);
   const forDels = mulDiv(rest, delegated, n.bond + delegated);
-  let paid = 0;
+  let paid = 0n;
   for (const a of sorted(dels)) {
     const d = dels[a]!;
     const x = mulDiv(forDels, d.amount, delegated);
-    if (x <= 0) continue;
+    if (x <= 0n) continue;
     credit(s, a, VEL, x);
     d.earned += x;
     paid += x;
@@ -104,7 +105,7 @@ export function releaseUndelegations(s: ChainState, X: number) {
   if (!st) return;
   for (const a of sorted(st.unbonding)) {
     const list = st.unbonding[a]!;
-    const due = list.filter((u) => u.release <= X).reduce((t, u) => t + u.amount, 0);
+    const due = list.filter((u) => u.release <= X).reduce((t, u) => t + u.amount, 0n);
     if (!due) continue;
     const left = list.filter((u) => u.release > X);
     if (left.length) st.unbonding[a] = left; else delete st.unbonding[a];
@@ -120,7 +121,7 @@ export function delegationsOfNode(s: ChainState, node: string) {
 }
 export function delegationsOfAddress(s: ChainState, address: string) {
   const st = stakeOf(s);
-  const out: { address: string; node: string; amount: number; earned: number; since: number }[] = [];
+  const out: { address: string; node: string; amount: bigint; earned: bigint; since: number }[] = [];
   if (!st) return { delegations: out, unbonding: [] as StakeUnbonding[] };
   for (const node of sorted(st.del)) { const d = st.del[node]![address]; if (d) out.push({ address, node, ...d }); }
   return { delegations: out, unbonding: st.unbonding[address] ?? [] };
