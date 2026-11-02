@@ -75,7 +75,7 @@ emisión(e) = (alguien produjo bloques en e) ? min(R(e), TOPE − acuñado) : 0
 R(e)       = R0 >> floor(e / MITAD)        (0 desde la mitad 33 en v4)
 ```
 
-| | v3 (bloques 0 a 28.799) | v4 (desde el bloque 28.800) |
+| | v3 (bloques 0 a 28.799) | v4 (desde el bloque 64.800) |
 |---|---|---|
 | Tope | 1.000 M VEL | 21.000 M VEL |
 | `R0` por época de 1 h | 25.684,931506 VEL | 298.026,465890942276979237 VEL |

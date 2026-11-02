@@ -17,10 +17,10 @@ export interface Upgrade {
 
 /**
  * Altura de activación de la economía v4 en velum-mainnet-1: primer cierre de época (múltiplo de 1.800) al menos 2 h
- * después de publicar el nodo v2.1.0. Fijada el 2026-11-02: 28.800 (época 16), hacia las 12:05 UTC de ese día. Desde aquí: importes BigInt de 18 decimales, tope 21.000 M VEL, mitad cada 4 años,
+ * después de publicar el nodo v2.1.0. Fijada el 2026-11-02: 64.800 (época 36), hacia las 09:00 UTC del 3 de noviembre de 2026. Desde aquí: importes BigInt de 18 decimales, tope 21.000 M VEL, mitad cada 4 años,
  * sin quema y créditos de mensajería (docs/economia-v4.md). Los bloques anteriores se aplican con las reglas v3 (era.ts).
  */
-export const MAINNET_V4_HEIGHT = 28_800;
+export const MAINNET_V4_HEIGHT = 64_800;
 
 /**
  * SOLO PRUEBAS de punta a punta con una génesis de prueba: `VELUM_TEST_ONLY_V4_HEIGHT=1` adelanta la v4.

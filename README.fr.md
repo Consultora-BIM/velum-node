@@ -219,7 +219,7 @@ Les messages circulent sous forme de fragments chiffrés entre clients et nœuds
 
 ## Économie
 
-L'économie v4 s'active en place au bloc **28 800** (prévu vers 12 h 05 UTC le 2 novembre 2026), sans redémarrer la chaîne.
+L'économie v4 s'active en place au bloc **64 800** (prévu vers 9 h 00 UTC le 3 novembre 2026), sans redémarrer la chaîne.
 
 | Paramètre | Valeur |
 |---|---|
@@ -244,7 +244,7 @@ R(e) = R0 >> floor(e / 35064)        (0 à partir de la 33e division)
 | Élément | État |
 |---|---|
 | `velum-mainnet-1` | En service depuis le 1er novembre 2026, 21 h 00 UTC |
-| Économie v4 | S'active au bloc 28 800 (nœud 2.1.0) |
+| Économie v4 | S'active au bloc 64 800 (nœud 2.1.0) |
 | Messagerie, paiements, nœuds complets et légers | Actifs |
 | Production de blocs | Un seul nœud aujourd'hui |
 | Finalité | Pas encore |

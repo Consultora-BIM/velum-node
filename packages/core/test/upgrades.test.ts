@@ -9,7 +9,7 @@ useTestGenesis();
 const prop = V.keyPairFromText("proponente-upgrade");
 const ORIGINAL = V.upgrades();
 // Base «versión N»: en testnet, la tabla real (v4 desde génesis). En mainnet, la tabla real lleva la v4 en
-// MAINNET_V4_HEIGHT (28.800), por encima de H: se usa v1 en génesis y v4 desde el bloque 1 para probar sobre v4.
+// MAINNET_V4_HEIGHT (64.800), por encima de H: se usa v1 en génesis y v4 desde el bloque 1 para probar sobre v4.
 const T1: readonly V.Upgrade[] = V.IS_MAINNET
   ? [{ version: 1, height: 0, name: "g" }, { version: 4, height: 1, name: "v4", migrate: V.migrateV4 }]
   : ORIGINAL;

@@ -80,7 +80,7 @@ El puente entre los dos: los nodos que llevan mensajes **lo demuestran** con rec
 
 ## Cifras clave
 
-| Concepto | Antes de la v4 (bloques 0 a 28.799) | Economía v4 (desde el bloque 28.800) |
+| Concepto | Antes de la v4 (bloques 0 a 28.799) | Economía v4 (desde el bloque 64.800) |
 |---|---|---|
 | Decimales de VEL | 6 | 18 (1 velo = 10⁻¹⁸ VEL) |
 | Tope | 1.000 M VEL | 21.000 M VEL |
@@ -91,7 +91,7 @@ El puente entre los dos: los nodos que llevan mensajes **lo demuestran** con rec
 | Cupo gratis de mensajes | — | 20 cada 10 min (definido; **aún no se aplica**) |
 | Créditos de mensajería | — | 22 µUSDT por mensaje por encima del cupo |
 
-La v4 se activa **en vivo**, sin reiniciar la cadena, en el bloque **28.800** (época 16, hacia las 12:05 UTC del 2 de noviembre de 2026), con el nodo 2.1.0. Ver [nodos §10](nodos.md#10-actualizaciones-de-protocolo-en-vivo).
+La v4 se activa **en vivo**, sin reiniciar la cadena, en el bloque **64.800** (época 36, hacia las 09:00 UTC del 3 de noviembre de 2026), con el nodo 2.1.0. Ver [nodos §10](nodos.md#10-actualizaciones-de-protocolo-en-vivo).
 
 ## Estado honesto, en una tabla
 
@@ -102,7 +102,7 @@ La v4 se activa **en vivo**, sin reiniciar la cadena, en el bloque **28.800** (�
 | Nodos completos y ligeros, recompensas por trabajo | Activos |
 | Producción de bloques | **Un solo nodo hoy.** El protocolo admite muchos |
 | Finalidad de bloques | No existe todavía (gana la rama más alta) |
-| Economía v4 | Activación en el bloque 28.800 (nodo 2.1.0) |
+| Economía v4 | Activación en el bloque 64.800 (nodo 2.1.0) |
 | Intercambio P2P (HTLC) | Escrito, sin activar |
 | Pasarela USDT ⇄ vUSDT | Cerrada |
 | Firmas poscuánticas | Pendientes (hoy ed25519; el cifrado sí es poscuántico híbrido) |

@@ -19,7 +19,7 @@ Website: <https://velumprotocol.org> · Code (Apache-2.0): <https://github.com/C
 
 Velum is a private messaging network that runs on infrastructure carried by its own community and keeps the books of that work on a purpose-built ledger. Messages are end-to-end encrypted on the sender's device with a hybrid classical/post-quantum key agreement (X25519 + ML-KEM-768), padded to one of seven fixed sizes, split with a 3-of-5 Reed–Solomon code and left in daily-rotating mailboxes held by community nodes. Messages never touch the chain. The chain records payments, node registrations, aliases and *work claims*: compact Merkle commitments to anonymous delivery receipts, audited by public random sampling. Nodes that carry messages and produce blocks receive, every hourly epoch, a share of a pot made of fees, a slow release from a keyless Network Reserve and a fixed, halving emission. The native unit, VEL, has 18 decimals and a hard cap of 21,000,000,000; it is used for everyday payments (phone-to-phone or with a shop QR code) and to pay for messaging above a free quota. No VEL is ever burned.
 
-The main network, `velum-mainnet-1`, has been live since 1 November 2026 at 21:00 UTC. Economy v4 activates in place at block 28,800 (scheduled for about 12:05 UTC on 2 November 2026) without restarting the chain. This paper describes the system as implemented in the reference code, including its present limits: today a single node produces blocks, there is no finality gadget yet, and signatures are classical Ed25519. We state these plainly and describe the plan to remove them.
+The main network, `velum-mainnet-1`, has been live since 1 November 2026 at 21:00 UTC. Economy v4 activates in place at block 64,800 (scheduled for about 09:00 UTC on 3 November 2026) without restarting the chain. This paper describes the system as implemented in the reference code, including its present limits: today a single node produces blocks, there is no finality gadget yet, and signatures are classical Ed25519. We state these plainly and describe the plan to remove them.
 
 ---
 
@@ -625,10 +625,10 @@ flowchart LR
 | Version | Mainnet height | Change | Status |
 |---|---|---|---|
 | v1 | 0 | Genesis `velum-mainnet-1` (v3 economy: 6 decimals, cap 1,000 M VEL, 2-year halving) | Active from 2026-11-01 21:00 UTC |
-| v4 | **28,800** (epoch 16) | 18 decimals, cap 21,000 M VEL, 4-year halving, no `burned` field, messaging credits | Scheduled ≈ 12:05 UTC, 2026-11-02; node 2.1.0 |
+| v4 | **64,800** (epoch 36) | 18 decimals, cap 21,000 M VEL, 4-year halving, no `burned` field, messaging credits | Scheduled ≈ 09:00 UTC, 2026-11-03; node 2.1.0 |
 | v5 | — | HTLC locks | Written, no height |
 
-**The v4 migration.** In block 28,800, before its transactions, every VEL amount in the state (balances, bonds, delegations, unbonding queues, earned counters, `minted`, pots, the Reserve) is multiplied by 10¹² (µVEL → velos; other tokens unchanged); `supply.burned` (always 0) is removed; `msgCredits`, `supply.creditsPaid` and `supply.credits` appear. From that block the state root uses the v4 encoding (decimal-string amounts) and headers carry `pv: 4`. Balances expressed in VEL do not change. Emission continues from the same epoch counter with the v4 formula, so epoch 16 discovers `R(16) = R0`.
+**The v4 migration.** In block 64,800, before its transactions, every VEL amount in the state (balances, bonds, delegations, unbonding queues, earned counters, `minted`, pots, the Reserve) is multiplied by 10¹² (µVEL → velos; other tokens unchanged); `supply.burned` (always 0) is removed; `msgCredits`, `supply.creditsPaid` and `supply.credits` appear. From that block the state root uses the v4 encoding (decimal-string amounts) and headers carry `pv: 4`. Balances expressed in VEL do not change. Emission continues from the same epoch counter with the v4 formula, so epoch 36 discovers `R(16) = R0`.
 
 ---
 

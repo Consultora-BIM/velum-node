@@ -19,7 +19,7 @@ Web: <https://velumprotocol.org> · Código (Apache-2.0): <https://github.com/Co
 
 Velum es una red de mensajería privada que funciona sobre una infraestructura sostenida por su propia comunidad y lleva las cuentas de ese trabajo en un libro contable hecho a medida. Los mensajes se cifran de extremo a extremo en el dispositivo de quien envía con un acuerdo de claves híbrido clásico/poscuántico (X25519 + ML-KEM-768), se rellenan hasta uno de siete tamaños fijos, se reparten con un código Reed–Solomon 3 de 5 y se dejan en buzones que cambian cada día, guardados por nodos de la comunidad. Los mensajes nunca tocan la cadena. La cadena registra pagos, altas de nodos, alias y *reclamaciones de trabajo*: compromisos Merkle compactos sobre recibos anónimos de entrega, auditados por muestreo aleatorio público. Los nodos que llevan mensajes y producen bloques reciben, en cada época de una hora, una parte de una bolsa formada por comisiones, una liberación lenta desde una Reserva de la Red sin clave y una emisión fija que se reduce a la mitad periódicamente. La unidad nativa, VEL, tiene 18 decimales y un tope fijo de 21.000.000.000; se usa para pagos del día a día (de móvil a móvil o con el QR de una tienda) y para pagar la mensajería por encima de una cuota gratuita. Nunca se quema VEL.
 
-La red principal, `velum-mainnet-1`, está en marcha desde el 1 de noviembre de 2026 a las 21:00 UTC. La economía v4 se activa sobre la marcha en el bloque 28.800 (previsto hacia las 12:05 UTC del 2 de noviembre de 2026) sin reiniciar la cadena. Este documento describe el sistema tal como está implementado en el código de referencia, incluidos sus límites actuales: hoy un solo nodo produce bloques, todavía no hay mecanismo de finalidad y las firmas son Ed25519 clásicas. Lo decimos sin rodeos y describimos el plan para resolverlo.
+La red principal, `velum-mainnet-1`, está en marcha desde el 1 de noviembre de 2026 a las 21:00 UTC. La economía v4 se activa sobre la marcha en el bloque 64.800 (previsto hacia las 09:00 UTC del 3 de noviembre de 2026) sin reiniciar la cadena. Este documento describe el sistema tal como está implementado en el código de referencia, incluidos sus límites actuales: hoy un solo nodo produce bloques, todavía no hay mecanismo de finalidad y las firmas son Ed25519 clásicas. Lo decimos sin rodeos y describimos el plan para resolverlo.
 
 ---
 
@@ -625,10 +625,10 @@ flowchart LR
 | Versión | Altura en mainnet | Cambio | Estado |
 |---|---|---|---|
 | v1 | 0 | Génesis `velum-mainnet-1` (economía v3: 6 decimales, tope de 1.000 M VEL, mitad cada 2 años) | Activa desde el 2026-11-01 21:00 UTC |
-| v4 | **28.800** (época 16) | 18 decimales, tope de 21.000 M VEL, mitad cada 4 años, sin campo `burned`, créditos de mensajería | Prevista ≈ 12:05 UTC del 2026-11-02; nodo 2.1.0 |
+| v4 | **64.800** (época 36) | 18 decimales, tope de 21.000 M VEL, mitad cada 4 años, sin campo `burned`, créditos de mensajería | Prevista ≈ 09:00 UTC del 2026-11-03; nodo 2.1.0 |
 | v5 | — | Candados HTLC | Escrita, sin altura |
 
-**La migración v4.** En el bloque 28.800, antes de sus transacciones, cada importe en VEL del estado (saldos, fianzas, delegaciones, colas de desbloqueo, contadores de lo ganado, `minted`, bolsas, la Reserva) se multiplica por 10¹² (µVEL → velos; los demás tokens no cambian); se elimina `supply.burned` (siempre 0); aparecen `msgCredits`, `supply.creditsPaid` y `supply.credits`. Desde ese bloque, la raíz de estado usa la codificación v4 (importes como cadenas decimales) y las cabeceras llevan `pv: 4`. Los saldos expresados en VEL no cambian. La emisión sigue con el mismo contador de épocas y la fórmula v4, así que en la época 16 se descubre `R(16) = R0`.
+**La migración v4.** En el bloque 64.800, antes de sus transacciones, cada importe en VEL del estado (saldos, fianzas, delegaciones, colas de desbloqueo, contadores de lo ganado, `minted`, bolsas, la Reserva) se multiplica por 10¹² (µVEL → velos; los demás tokens no cambian); se elimina `supply.burned` (siempre 0); aparecen `msgCredits`, `supply.creditsPaid` y `supply.credits`. Desde ese bloque, la raíz de estado usa la codificación v4 (importes como cadenas decimales) y las cabeceras llevan `pv: 4`. Los saldos expresados en VEL no cambian. La emisión sigue con el mismo contador de épocas y la fórmula v4, así que en la época 36 se descubre `R(16) = R0`.
 
 ---
 

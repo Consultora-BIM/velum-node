@@ -52,7 +52,27 @@ export const powHash = (tx: { pow?: number }) => bytesToHex(sha512(stampInput(po
  * Busca un sello de `bits` ceros para la tx (sin firmar). Devuelve el nonce.
  * Coste medio 2^bits hashes (16 bits ≈ 0,1 s en Bun; 20 bits ≈ 2 s).
  */
+/**
+ * Resolutor externo del sello (p. ej. SHA-512 nativo en el móvil, mucho más rápido que en JavaScript). Recibe el
+ * cuerpo en hex, los bits y el nonce inicial, y devuelve el nonce. Solo acelera la búsqueda: el resultado se comprueba
+ * aquí con el mismo cálculo y, si no vale, se busca en JavaScript. No cambia ninguna regla de la cadena.
+ */
+export type PowSolver = (bodyHex: string, bits: number, start: number) => number;
+let externalSolver: PowSolver | null = null;
+export function setPowSolver(s: PowSolver | null) {
+  externalSolver = s;
+}
+
 export function solvePow(tx: object, bits: number, start = 0): number {
+  if (externalSolver) {
+    try {
+      const body = powBody(tx);
+      const n = externalSolver(bytesToHex(body), bits, start);
+      if (Number.isSafeInteger(n) && n >= start && leadingZeroBits(sha512(stampInput(body, n))) >= bits) return n;
+    } catch {
+      // Resolutor nativo no disponible o fallido: se sigue en JavaScript.
+    }
+  }
   const buf = stampInput(powBody(tx), 0);
   const full = bits >> 3, rest = bits & 7;
   const mask = rest ? (0xff << (8 - rest)) & 0xff : 0;

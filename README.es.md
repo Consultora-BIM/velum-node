@@ -219,7 +219,7 @@ Los mensajes viajan como trozos cifrados entre clientes y nodos y nunca se escri
 
 ## Economía
 
-La economía v4 se activa en vivo en el bloque **28.800** (previsto hacia las 12:05 UTC del 2 de noviembre de 2026), sin reiniciar la cadena.
+La economía v4 se activa en vivo en el bloque **64.800** (previsto hacia las 09:00 UTC del 3 de noviembre de 2026), sin reiniciar la cadena.
 
 | Parámetro | Valor |
 |---|---|
@@ -244,7 +244,7 @@ R(e) = R0 >> floor(e / 35064)        (0 a partir de la mitad número 33)
 | Parte | Estado |
 |---|---|
 | `velum-mainnet-1` | En marcha desde el 1 de noviembre de 2026, 21:00 UTC |
-| Economía v4 | Se activa en el bloque 28.800 (nodo 2.1.0) |
+| Economía v4 | Se activa en el bloque 64.800 (nodo 2.1.0) |
 | Mensajería, pagos, nodos completos y ligeros | Activos |
 | Producción de bloques | Un solo nodo hoy |
 | Finalidad | Todavía no |

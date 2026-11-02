@@ -8,7 +8,7 @@
 
 | # | Pieza | Estado | Lo que falta, en una línea |
 |---|---|---|---|
-| 1 | Economía v4 en mainnet | Parcial | Altura fijada (28.800); reaplicar la mainnet real y subir `minNodeVersion` |
+| 1 | Economía v4 en mainnet | Parcial | Altura fijada (64.800); reaplicar la mainnet real y subir `minNodeVersion` |
 | 2 | Nodo 2.1.0 | Parcial | Código en 2.1.0; falta publicar el manifiesto firmado |
 | 3 | App y web con importes v4 | Parcial | La cartera del móvil aún usa `number` |
 | 4 | HTLC P2P (v5) | Escrito | Altura, nodo/SDK/app y contrato en la otra cadena |
@@ -36,7 +36,7 @@
 
 **Falta:**
 
-1. **H fijada:** `MAINNET_V4_HEIGHT = 28_800` (época 16, hacia las 12:05 UTC del 2 de noviembre de 2026), primer cierre de época al menos 2 h después de publicar el nodo 2.1.0.
+1. **H fijada:** `MAINNET_V4_HEIGHT = 64_800` (época 36, hacia las 09:00 UTC del 3 de noviembre de 2026), primer cierre de época al menos 2 h después de publicar el nodo 2.1.0.
 2. Reaplicar la mainnet real con el binario nuevo (`replay-mainnet.ts`) y comprobar raíces e invariante.
 3. Subir `minNodeVersion` en el manifiesto firmado antes de H.
 4. Aviso público de 14 días.

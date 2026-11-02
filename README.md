@@ -219,7 +219,7 @@ Messages travel as encrypted shards between clients and nodes and are never writ
 
 ## Economy
 
-Economy v4 activates in place at block **28,800** (scheduled for about 12:05 UTC on 2 November 2026), without restarting the chain.
+Economy v4 activates in place at block **64,800** (scheduled for about 09:00 UTC on 3 November 2026), without restarting the chain.
 
 | Parameter | Value |
 |---|---|
@@ -244,7 +244,7 @@ R(e) = R0 >> floor(e / 35064)        (0 from the 33rd halving)
 | Part | Status |
 |---|---|
 | `velum-mainnet-1` | Live since 1 November 2026, 21:00 UTC |
-| Economy v4 | Activates at block 28,800 (node 2.1.0) |
+| Economy v4 | Activates at block 64,800 (node 2.1.0) |
 | Messaging, payments, full and light nodes | Active |
 | Block production | A single node today |
 | Finality | Not yet |

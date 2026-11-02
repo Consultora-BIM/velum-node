@@ -168,7 +168,7 @@ bolsa(e) = comisiones de la época + 0,1 % de la Reserva de la Red + emisión R(
 
 ### 5.2 Emisión
 
-| | Economía v3 (bloques 0 a 28.799) | Economía v4 (desde el bloque 28.800) |
+| | Economía v3 (bloques 0 a 28.799) | Economía v4 (desde el bloque 64.800) |
 |---|---|---|
 | Decimales | 6 (µVEL) | 18 (velos) |
 | Tope | 1.000.000.000 VEL | 21.000.000.000 VEL |
@@ -273,10 +273,10 @@ Reglas:
 | Versión | Altura (mainnet) | Qué cambia | Estado |
 |---|---|---|---|
 | v1 | 0 | Génesis `velum-mainnet-1` (economía v3, µVEL) | Activa |
-| v4 | `MAINNET_V4_HEIGHT` | 18 decimales (×10¹²), tope 21.000 M, mitad cada 4 años, sin `burned`, créditos de mensajería | **Altura 28.800** (época 16, ≈ 12:05 UTC del 2 de noviembre de 2026) |
+| v4 | `MAINNET_V4_HEIGHT` | 18 decimales (×10¹²), tope 21.000 M, mitad cada 4 años, sin `burned`, créditos de mensajería | **Altura 64.800** (época 36, ≈ 09:00 UTC del 3 de noviembre de 2026) |
 | v5 | — | Candados hash-tiempo (HTLC) para intercambio P2P | Escrita. **Sin altura** |
 
-> **Altura v4.** `MAINNET_V4_HEIGHT = 28_800`: primer cierre de época al menos 2 h después de publicar el nodo 2.1.0, fijado el 2 de noviembre de 2026.
+> **Altura v4.** `MAINNET_V4_HEIGHT = 64_800`: primer cierre de época al menos 2 h después de publicar el nodo 2.1.0, fijado el 2 de noviembre de 2026.
 
 La testnet (`velum-testnet-4`) corre v4 desde génesis.
 
